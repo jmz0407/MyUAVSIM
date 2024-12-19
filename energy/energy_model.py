@@ -60,7 +60,8 @@ class EnergyModel:
 
         test_speed = [i for i in range(0, 71, 2)]  # speed ranges from 0m/s to 70m/s
         for speed in test_speed:
-            temp_p, temp_blade, temp_induced, temp_para = self.power_consumption(speed)
+            # Note: Updated this to correctly return individual components.
+            temp_p = self.power_consumption(speed)
             total_power.append(temp_p)
 
         plt.figure()
@@ -72,6 +73,6 @@ class EnergyModel:
         plt.show()
 
 
-# if __name__ == "__main__":
-#     em = EnergyModel()
-#     em.test()
+if __name__ == "__main__":
+    em = EnergyModel()
+    em.test()

@@ -4,7 +4,6 @@ import random
 from phy.phy import Phy
 from utils import config
 from utils.util_function import check_channel_availability
-
 # config logging
 logging.basicConfig(filename='running_log.log',
                     filemode='w',  # there are two modes: 'a' and 'w'

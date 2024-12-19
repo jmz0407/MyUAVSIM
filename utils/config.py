@@ -7,7 +7,7 @@ IEEE_802_11 = IEEE_802_11().b
 MAP_LENGTH = 500  # m, length of the map
 MAP_WIDTH = 500  # m, width of the map
 MAP_HEIGHT = 500  # m, height of the map
-SIM_TIME = 20 * 1e6  # us, total simulation time
+SIM_TIME = 5 * 1e6  # us, total simulation time
 NUMBER_OF_DRONES = 15  # number of drones in the network
 STATIC_CASE = 0  # whether to simulate a static network
 HETEROGENEOUS = 0  # heterogeneous network support (in terms of speed)
@@ -61,7 +61,6 @@ HELLO_PACKET_LENGTH = IP_HEADER_LENGTH + MAC_HEADER_LENGTH + PHY_HEADER_LENGTH +
 
 # define the range of packet_id of different types of packets
 GL_ID_HELLO_PACKET = 10000
-GL_ID_ACK_PACKET = 20000
 GL_ID_VF_PACKET = 30000
 GL_ID_GRAD_MESSAGE = 40000
 GL_ID_CHIRP_PACKET = 50000
@@ -73,9 +72,14 @@ BANDWIDTH = IEEE_802_11['bandwidth']
 SENSING_RANGE = 600  # in meter, defines the area where a sending node can disturb a transmission from a third node
 
 # --------------------- mac layer parameters --------------------- #
-SLOT_DURATION = IEEE_802_11['slot_duration']
-SIFS_DURATION = IEEE_802_11['SIFS']
-DIFS_DURATION = SIFS_DURATION + (2 * SLOT_DURATION)
+# SLOT_DURATION = IEEE_802_11['slot_duration']
+SLOT_DURATION = NUMBER_OF_DRONES
+# SIFS_DURATION = IEEE_802_11['SIFS']
+SIFS_DURATION = 0
+# DIFS_DURATION = SIFS_DURATION + (2 * SLOT_DURATION)
+DIFS_DURATION = 0
 CW_MIN = 201  # initial contention window size
-ACK_TIMEOUT = ACK_PACKET_LENGTH / BIT_RATE * 1e6 + SIFS_DURATION + 50  # maximum waiting time for ACK (0.1 s)
-MAX_RETRANSMISSION_ATTEMPT = 5
+# ACK_TIMEOUT = ACK_PACKET_LENGTH / BIT_RATE * 1e6 + SIFS_DURATION + 50  # maximum waiting time for ACK (0.1 s)
+ACK_TIMEOUT = 0
+# MAX_RETRANSMISSION_ATTEMPT = 5
+MAX_RETRANSMISSION_ATTEMPT = 0

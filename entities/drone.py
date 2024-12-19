@@ -11,6 +11,7 @@ from routing.grad.grad import Grad
 from routing.opar.opar import Opar
 from routing.q_routing.q_routing import QRouting
 from mac.csma_ca import CsmaCa
+from mac.tra_tdma import Tdma
 from mac.pure_aloha import PureAloha
 from mobility.gauss_markov_3d import GaussMarkov3D
 from mobility.random_walk_3d import RandomWalk3D
@@ -97,7 +98,7 @@ class Drone:
 
         random.seed(2025 + self.identifier)
         self.pitch = random.uniform(-0.05, 0.05)
-        self.speed = speed  # constant speed throughout the simulation
+        self.speed = 0.001
         self.velocity = [self.speed * math.cos(self.direction) * math.cos(self.pitch),
                          self.speed * math.sin(self.direction) * math.cos(self.pitch),
                          self.speed * math.sin(self.pitch)]
@@ -113,7 +114,8 @@ class Drone:
         self.transmitting_queue = queue.Queue()  # queue in the real sense
         self.waiting_list = []
 
-        self.mac_protocol = CsmaCa(self)
+        #self.mac_protocol = CsmaCa(self)
+        self.mac_protocol = Tdma(self)  # Use TDMA protocol instead of CSMA/CA
         self.mac_process_dict = dict()
         self.mac_process_finish = dict()
         self.mac_process_count = 0
@@ -191,28 +193,48 @@ class Drone:
             else:  # cannot generate packets if "my_drone" is in sleep state
                 break
 
+    # def blocking(self):
+    #     """
+    #     The process of waiting for an ACK will block subsequent incoming data packets to simulate the
+    #     "head-of-line blocking problem"
+    #     :return: none
+    #     """
+    #
+    #     if self.enable_blocking:
+    #         if not self.mac_protocol.wait_ack_process_finish:
+    #             flag = False  # there is currently no waiting process for ACK
+    #         else:
+    #             # get the latest process status
+    #             final_indicator = list(self.mac_protocol.wait_ack_process_finish.items())[-1]
+    #
+    #             if final_indicator[1] == 0:
+    #                 flag = True  # indicates that the drone is still waiting
+    #             else:
+    #                 flag = False  # there is currently no waiting process for ACK
+    #     else:
+    #         flag = False
+    #
+    #     return flag
+
     def blocking(self):
         """
-        The process of waiting for an ACK will block subsequent incoming data packets to simulate the
-        "head-of-line blocking problem"
+        Simulate the head-of-line blocking problem, but without waiting for an ACK,
+        we simply check if there's any ongoing transmission task.
         :return: none
         """
 
         if self.enable_blocking:
-            if not self.mac_protocol.wait_ack_process_finish:
-                flag = False  # there is currently no waiting process for ACK
+            # Check if there's a transmission task that is currently being processed.
+            # If there is a transmission task in progress, we block the next packet.
+            if self.mac_protocol.current_transmission is not None:
+                flag = True  # Indicates that a packet is currently being transmitted, block new packet
             else:
-                # get the latest process status
-                final_indicator = list(self.mac_protocol.wait_ack_process_finish.items())[-1]
-
-                if final_indicator[1] == 0:
-                    flag = True  # indicates that the drone is still waiting
-                else:
-                    flag = False  # there is currently no waiting process for ACK
+                flag = False  # No transmission is in progress, allow new packet
         else:
-            flag = False
+            flag = False  # If blocking is not enabled, do not block
 
         return flag
+
 
     def feed_packet(self):
         """
@@ -377,12 +399,12 @@ class Drone:
                         if pkd.get_current_ttl() < config.MAX_TTL:
                             sender = all_drones_send_to_me[which_one]
 
-                            logging.info('Packet %s from UAV: %s is received by UAV: %s at time: %s, sinr is: %s',
+                            print('Packet %s from UAV: %s is received by UAV: %s at time: %s, sinr is: %s',
                                          pkd.packet_id, sender, self.identifier, self.simulator.env.now, max_sinr)
 
                             yield self.env.process(self.routing_protocol.packet_reception(pkd, sender))
                         else:
-                            logging.info('Packet %s is dropped due to exceeding max TTL', pkd.packet_id)
+                            print('Packet %s is dropped due to exceeding max TTL', pkd.packet_id)
                     else:  # sinr is lower than threshold
                         self.simulator.metrics.collision_num += len(sinr_list)
                         pass

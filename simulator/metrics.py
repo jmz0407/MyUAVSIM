@@ -53,8 +53,40 @@ class Metrics:
 
         self.collision_num = 0
 
+    # def print_metrics(self):
+    #     # calculate the average end-to-end delay
+    #     for key in self.deliver_time_dict.keys():
+    #         self.delivery_time.append(self.deliver_time_dict[key])
+    #
+    #     for key2 in self.throughput_dict.keys():
+    #         self.throughput.append(self.throughput_dict[key2])
+    #
+    #     for key3 in self.hop_cnt_dict.keys():
+    #         self.hop_cnt.append(self.hop_cnt_dict[key3])
+    #
+    #     e2e_delay = np.mean(self.delivery_time) / 1e3  # unit: ms
+    #
+    #     pdr = len(self.datapacket_arrived) / self.datapacket_generated_num * 100  # in %
+    #
+    #     rl = self.control_packet_num / len(self.datapacket_arrived)
+    #
+    #     throughput = np.mean(self.throughput) / 1e3  # in Kbps
+    #
+    #     hop_cnt = np.mean(self.hop_cnt)
+    #
+    #     average_mac_delay = np.mean(self.mac_delay)
+    #
+    #     print('Totally send: ', self.datapacket_generated_num, ' data packets')
+    #     print('Packet delivery ratio is: ', pdr, '%')
+    #     print('Average end-to-end delay is: ', e2e_delay, 'ms')
+    #     print('Routing load is: ', rl)
+    #     print('Average throughput is: ', throughput, 'Kbps')
+    #     print('Average hop count is: ', hop_cnt)
+    #     print('Collision num is: ', self.collision_num)
+    #     print('Average mac delay is: ', average_mac_delay, 'ms')
+
     def print_metrics(self):
-        # calculate the average end-to-end delay
+        # 计算平均端到端延迟
         for key in self.deliver_time_dict.keys():
             self.delivery_time.append(self.deliver_time_dict[key])
 
@@ -64,19 +96,32 @@ class Metrics:
         for key3 in self.hop_cnt_dict.keys():
             self.hop_cnt.append(self.hop_cnt_dict[key3])
 
-        e2e_delay = np.mean(self.delivery_time) / 1e3  # unit: ms
+        # 计算平均端到端延迟（单位：毫秒）
+        e2e_delay = np.mean(self.delivery_time) / 1e3  # 单位：ms
 
-        pdr = len(self.datapacket_arrived) / self.datapacket_generated_num * 100  # in %
+        # 计算Packet Delivery Ratio（PDR）
+        if self.datapacket_generated_num > 0:
+            pdr = len(self.datapacket_arrived) / self.datapacket_generated_num * 100  # 百分比
+        else:
+            pdr = 0  # 如果没有生成数据包，则PDR为0%
 
-        rl = self.control_packet_num / len(self.datapacket_arrived)
+        # 计算Routing Load（RL），避免除以零
+        if len(self.datapacket_arrived) > 0:
+            rl = self.control_packet_num / len(self.datapacket_arrived)
+        else:
+            rl = 0  # 如果没有接收到数据包，则RL为0
 
-        throughput = np.mean(self.throughput) / 1e3  # in Kbps
+        # 计算吞吐量（单位：Kbps）
+        throughput = np.mean(self.throughput) / 1e3  # 单位：Kbps
 
+        # 计算平均跳数
         hop_cnt = np.mean(self.hop_cnt)
 
+        # 计算平均MAC延迟
         average_mac_delay = np.mean(self.mac_delay)
 
-        print('Totally send: ', self.datapacket_generated_num, ' data packets')
+        # 打印统计信息
+        print('Totally sent: ', self.datapacket_generated_num, ' data packets')
         print('Packet delivery ratio is: ', pdr, '%')
         print('Average end-to-end delay is: ', e2e_delay, 'ms')
         print('Routing load is: ', rl)

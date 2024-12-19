@@ -39,13 +39,19 @@ class Phy:
         """
 
         # energy consumption
+        # Log the packet sending event
+        logging.info(
+            f"UAV: {self.my_drone.identifier} sending unicast packet {packet.packet_id} to UAV {next_hop_id} at time {self.env.now}")
         energy_consumption = (packet.packet_length / config.BIT_RATE) * config.TRANSMITTING_POWER
         self.my_drone.residual_energy -= energy_consumption
+        logging.info(
+            f"UAV: {self.my_drone.identifier} energy consumption for unicast: {energy_consumption:.3f} J, remaining energy: {self.my_drone.residual_energy:.3f} J")
 
         # transmit through the channel
         message = [packet, self.env.now, self.my_drone.identifier, 0]
 
         self.my_drone.simulator.channel.unicast_put(message, next_hop_id)
+        logging.info(f"UAV: {self.my_drone.identifier} successfully sent unicast packet {packet.packet_id} to UAV {next_hop_id}.")
 
     def broadcast(self, packet):
         """
@@ -53,15 +59,18 @@ class Phy:
         :param packet: tha packet (hello packet, etc.) that needs to be broadcast
         :return: none
         """
-
+        # Log the broadcast event
+        logging.info(f"UAV: {self.my_drone.identifier} broadcasting packet {packet.packet_id} at time {self.env.now}")
         # energy consumption
         energy_consumption = (packet.packet_length / config.BIT_RATE) * config.TRANSMITTING_POWER
         self.my_drone.residual_energy -= energy_consumption
-
+        logging.info(
+            f"UAV: {self.my_drone.identifier} energy consumption for broadcast: {energy_consumption:.3f} J, remaining energy: {self.my_drone.residual_energy:.3f} J")
         # transmit through the channel
         message = [packet, self.env.now, self.my_drone.identifier, 0]
 
         self.my_drone.simulator.channel.broadcast_put(message)
+        logging.info(f"UAV: {self.my_drone.identifier} successfully broadcasted packet {packet.packet_id}.")
 
     def multicast(self, packet, dst_id_list):
         """
@@ -70,6 +79,9 @@ class Phy:
         :param dst_id_list: list of ids for multicast destinations
         :return: none
         """
+        # Log the multicast event
+        logging.info(
+            f"UAV: {self.my_drone.identifier} multicasting packet {packet.packet_id} to {dst_id_list} at time {self.env.now}")
 
         # a transmission delay should be considered
         yield self.env.timeout(packet.packet_length / config.BIT_RATE * 1e6)
@@ -77,8 +89,11 @@ class Phy:
         # energy consumption
         energy_consumption = (packet.packet_length / config.BIT_RATE) * config.TRANSMITTING_POWER
         self.my_drone.residual_energy -= energy_consumption
+        logging.info(
+            f"UAV: {self.my_drone.identifier} energy consumption for multicast: {energy_consumption:.3f} J, remaining energy: {self.my_drone.residual_energy:.3f} J")
 
         # transmit through the channel
         message = [packet, self.env.now, self.my_drone.identifier]
 
         self.my_drone.simulator.channel.multicast_put(message, dst_id_list)
+        logging.info(f"UAV: {self.my_drone.identifier} successfully multicasted packet {packet.packet_id} to {dst_id_list}.")
