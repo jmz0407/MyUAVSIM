@@ -8,7 +8,7 @@ MAP_LENGTH = 500  # m, length of the map
 MAP_WIDTH = 500  # m, width of the map
 MAP_HEIGHT = 500  # m, height of the map
 SIM_TIME = 5 * 1e6  # us, total simulation time
-NUMBER_OF_DRONES = 10  # number of drones in the network
+NUMBER_OF_DRONES = 15  # number of drones in the network
 STATIC_CASE = 1  # whether to simulate a static network
 HETEROGENEOUS = 0  # heterogeneous network support (in terms of speed)
 LOGGING_LEVEL = logging.INFO  # whether to print the detail information during simulation
@@ -33,7 +33,7 @@ MAX_QUEUE_SIZE = 200  # maximum size of drone's queue
 TRANSMITTING_POWER = 0.1  # in Watt
 LIGHT_SPEED = 3 * 1e8  # light speed (m/s)
 CARRIER_FREQUENCY = IEEE_802_11['carrier_frequency']  # carrier frequency (Hz)
-NOISE_POWER = 4 * 1e-11  # noise power (Watt)
+NOISE_POWER = 6 * 1e-11  # noise power (Watt)
 RADIO_SWITCHING_TIME = 100  # us, the switching time of the transceiver mode
 SNR_THRESHOLD = 6  # dB
 
