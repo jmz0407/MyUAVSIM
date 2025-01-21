@@ -38,19 +38,20 @@ class Simulator:
         self.total_simulation_time = total_simulation_time  # total simulation time (ns)
 
         self.n_drones = n_drones  # total number of drones in the simulation
+        print('Total number of drones is: ', n_drones)
         self.channel_states = channel_states
         self.channel = Channel(self.env)
 
         self.metrics = Metrics(self)  # use to record the network performance
 
         start_position = start_coords.get_random_start_point_3d(seed)
-
+        # start_position = start_coords.get_custom_start_point_3d(seed)
         self.drones = []
         for i in range(n_drones):
             if config.HETEROGENEOUS:
                 speed = random.randint(5, 60)
             else:
-                speed = 20
+                speed = 0.1
 
             print('UAV: ', i, ' initial location is at: ', start_position[i], ' speed is: ', speed)
             drone = Drone(env=env, node_id=i, coords=start_position[i], speed=speed,

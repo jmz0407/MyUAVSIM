@@ -62,34 +62,26 @@ class Packet:
 
 
 class DataPacket(Packet):
-    """
-    Basic properties of the data packet
-
-    Attributes:
-        src_drone: source drone that originates the data packet
-        dst_drone: destination drone of this data packet
-        routing_path: record to whole routing path in centralized routing protocol
-        next_hop_id: identifier of the next hop drone
-
-    Author: Zihao Zhou, eezihaozhou@gmail.com
-    Created at: 2024/1/11
-    Updated at: 2024/5/4
-    """
-
     def __init__(self,
                  src_drone,
                  dst_drone,
                  creation_time,
                  data_packet_id,
                  data_packet_length,
-                 simulator):
+                 simulator,
+                 priority=0):  # 增加优先级参数，默认为0
         super().__init__(data_packet_id, data_packet_length, creation_time, simulator)
 
         self.src_drone = src_drone
         self.dst_drone = dst_drone
+        self.routing_path = None
+        self.next_hop_id = None
+        self.priority = priority  # 0: 普通流量, 1: 高优先级流量
 
-        self.routing_path = None  # for centralized routing protocols
-        self.next_hop_id = None  # next hop for this data packet
+        # 流相关属性
+        self.flow_id = f"{'hp_' if priority > 0 else ''}flow_{src_drone.identifier}_{dst_drone.identifier}"
+        self.retries = 0  # 重传次数
+        self.max_retries = 2 if priority > 0 else 1  # 高优先级数据包有更多重传机会
 
 
 class AckPacket(Packet):

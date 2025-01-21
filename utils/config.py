@@ -1,15 +1,15 @@
 import logging
 from utils.ieee_802_11 import IEEE_802_11
 
-IEEE_802_11 = IEEE_802_11().b
+IEEE_802_11 = IEEE_802_11().g  # IEEE 802.11g
 
 # --------------------- simulation parameters --------------------- #
 MAP_LENGTH = 500  # m, length of the map
 MAP_WIDTH = 500  # m, width of the map
 MAP_HEIGHT = 500  # m, height of the map
 SIM_TIME = 5 * 1e6  # us, total simulation time
-NUMBER_OF_DRONES = 15  # number of drones in the network
-STATIC_CASE = 0  # whether to simulate a static network
+NUMBER_OF_DRONES = 10  # number of drones in the network
+STATIC_CASE = 1  # whether to simulate a static network
 HETEROGENEOUS = 0  # heterogeneous network support (in terms of speed)
 LOGGING_LEVEL = logging.INFO  # whether to print the detail information during simulation
 
@@ -69,17 +69,16 @@ GL_ID_CHIRP_PACKET = 50000
 BIT_RATE = IEEE_802_11['bit_rate']
 BIT_TRANSMISSION_TIME = 1/BIT_RATE * 1e6
 BANDWIDTH = IEEE_802_11['bandwidth']
-SENSING_RANGE = 600  # in meter, defines the area where a sending node can disturb a transmission from a third node
+SENSING_RANGE = 200  # in meter, defines the area where a sending node can disturb a transmission from a third node
 
 # --------------------- mac layer parameters --------------------- #
 # SLOT_DURATION = IEEE_802_11['slot_duration']
-SLOT_DURATION = NUMBER_OF_DRONES
-# SIFS_DURATION = IEEE_802_11['SIFS']
-SIFS_DURATION = 0
-# DIFS_DURATION = SIFS_DURATION + (2 * SLOT_DURATION)
-DIFS_DURATION = 0
+SLOT_DURATION = 162  # in microsecond
+FRAME_DURATION = SLOT_DURATION * NUMBER_OF_DRONES * 2  # 适应节点数的动态帧长
+SIFS_DURATION = IEEE_802_11['SIFS']
+DIFS_DURATION = SIFS_DURATION + (2 * SLOT_DURATION)
 CW_MIN = 201  # initial contention window size
 # ACK_TIMEOUT = ACK_PACKET_LENGTH / BIT_RATE * 1e6 + SIFS_DURATION + 50  # maximum waiting time for ACK (0.1 s)
 ACK_TIMEOUT = 0
 # MAX_RETRANSMISSION_ATTEMPT = 5
-MAX_RETRANSMISSION_ATTEMPT = 0
+MAX_RETRANSMISSION_ATTEMPT = 5

@@ -130,6 +130,7 @@ class VfMotionController:
                 self.trajectory.append(next_pos)
 
             # judge if the drone has reach the target waypoint
+            self.next_position, self.force_direction = self.get_next_position()
             if euclidean_distance(next_pos, self.next_position) < 20:
                 hello_msg = VfPacket(src_drone=self.my_drone,
                                      creation_time=self.simulator.env.now,
@@ -143,7 +144,7 @@ class VfMotionController:
 
                 yield env.timeout(self.pause_time)
 
-                self.next_position = self.get_next_position()
+                self.next_position, self.force_direction = self.get_next_position()
 
             drone.coords = next_pos
             yield env.timeout(self.position_update_interval)

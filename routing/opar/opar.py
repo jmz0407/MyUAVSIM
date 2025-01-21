@@ -129,6 +129,10 @@ class Opar:
         enquire = False
         has_route = True
 
+        def next_hop_selection(self, packet):
+            # 记录路由控制包
+            if not isinstance(packet, DataPacket):
+                self.simulator.metrics.control_packet_num += 1
         if packet.src_drone is self.my_drone:  # if it is the source, optimization should be executed
             self.cost = self.calculate_cost_matrix()
             temp_cost = self.cost
@@ -221,60 +225,57 @@ class Opar:
 
     def packet_reception(self, packet, src_drone_id):
         """
-        Packet reception at network layer
-
-        since different routing protocols have their own corresponding packets, it is necessary to add this packet
-        reception function in the network layer
+        Packet reception at network layer, simplified for TDMA without handling ACK.
         :param packet: the received packet
         :param src_drone_id: previous hop
         :return: None
         """
-
         current_time = self.simulator.env.now
+        logging.info('~~~ Packet: %s is received by UAV: %s at time: %s',
+                     packet.packet_id, self.my_drone.identifier, current_time)
+
         if isinstance(packet, DataPacket):
             packet_copy = copy.copy(packet)
+            logging.info('~~~ DataPacket: %s is received by UAV: %s at time: %s',
+                         packet_copy.packet_id, self.my_drone.identifier, current_time)
 
-            logging.info('~~~Packet: %s is received by UAV: %s at: %s',
-                         packet_copy.packet_id, self.my_drone.identifier, self.simulator.env.now)
+            # 如果数据包的目标是当前 UAV，则进行处理
             if packet_copy.dst_drone.identifier == self.my_drone.identifier:
+
                 latency = self.simulator.env.now - packet_copy.creation_time  # in us
-                print('latency is: ', latency)
                 self.simulator.metrics.deliver_time_dict[packet_copy.packet_id] = latency
                 self.simulator.metrics.throughput_dict[packet_copy.packet_id] = config.DATA_PACKET_LENGTH / (latency / 1e6)
-                print('throughput is: ', self.simulator.metrics.throughput_dict[packet_copy.packet_id])
                 self.simulator.metrics.hop_cnt_dict[packet_copy.packet_id] = packet_copy.get_current_ttl()
-                print('hop cnt is: ', self.simulator.metrics.hop_cnt_dict[packet_copy.packet_id])
                 self.simulator.metrics.datapacket_arrived.add(packet_copy.packet_id)
-                print('Packet: ', packet_copy.packet_id, 'is delivered')
+                logging.info('Latency: %s us, Throughput: %s', latency,
+                             self.simulator.metrics.throughput_dict[packet_copy.packet_id])
 
+                # 记录该数据包的相关信息
+                logging.info('DataPacket: %s delivered to UAV: %s', packet_copy.packet_id, self.my_drone.identifier)
             else:
+                # 如果目标不是当前 UAV，将包放入队列中等待
                 if self.my_drone.transmitting_queue.qsize() < self.my_drone.max_queue_size:
                     self.my_drone.transmitting_queue.put(packet_copy)
-
                 else:
-                    pass
+                    logging.info('Queue full, DataPacket: %s cannot be added to the queue.', packet_copy.packet_id)
 
         elif isinstance(packet, VfPacket):
-            logging.info('At time %s, UAV: %s receives the vf hello msg from UAV: %s, pkd id is: %s',
-                         self.simulator.env.now, self.my_drone.identifier, src_drone_id, packet.packet_id)
+            logging.info('At time %s, UAV: %s receives a VF packet from UAV: %s, packet id: %s',
+                         current_time, self.my_drone.identifier, src_drone_id, packet.packet_id)
 
-            # update the neighbor table
+            # 更新邻居表
             self.my_drone.motion_controller.neighbor_table.add_neighbor(packet, current_time)
 
+            # 如果是 hello 消息，发送一个 ack
             if packet.msg_type == 'hello':
                 config.GL_ID_VF_PACKET += 1
                 ack_packet = VfPacket(src_drone=self.my_drone,
-                                      creation_time=self.simulator.env.now,
+                                      creation_time=current_time,
                                       id_hello_packet=config.GL_ID_VF_PACKET,
                                       hello_packet_length=config.HELLO_PACKET_LENGTH,
                                       simulator=self.simulator)
                 ack_packet.msg_type = 'ack'
-
                 self.my_drone.transmitting_queue.put(ack_packet)
-            else:
-                pass
-
-
 
     def check_waiting_list(self):
         while True:
