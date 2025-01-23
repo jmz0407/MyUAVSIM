@@ -124,13 +124,13 @@ def stdma_sinr_calculator(my_drone, main_drones_list, all_transmitting_drones_li
             interference_power += transmit_power * interference_path_loss
 
             distance = euclidean_distance(interferer.coords, receiver.coords)
-            logging.info('来自节点 %s 对接收器 %s 的干扰: 距离 = %.2f m, 功率 = %.6f',
-                         interferer_id, receiver.identifier, distance,
-                         transmit_power * interference_path_loss)
+            # logging.info('来自节点 %s 对接收器 %s 的干扰: 距离 = %.2f m, 功率 = %.6f',
+            #              interferer_id, receiver.identifier, distance,
+            #              transmit_power * interference_path_loss)
 
         sinr = 10 * math.log10(receive_power / (noise_power + interference_power))
-        logging.info('节点 %s 到接收器 %s 的SINR: %.2f dB',
-                     transmitter_id, receiver.identifier, sinr)
+        # logging.info('节点 %s 到接收器 %s 的SINR: %.2f dB',
+        #              transmitter_id, receiver.identifier, sinr)
 
         if sinr >= config.SNR_THRESHOLD:
             logging.info('节点 %s 的数据包成功被节点 %s 接收',

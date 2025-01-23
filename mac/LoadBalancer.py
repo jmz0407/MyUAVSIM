@@ -54,7 +54,7 @@ class LoadBalancer:
 
         # 计算吞吐量评分
         avg_throughput = sum(self.throughput_history[node_id]) / len(self.throughput_history[node_id])
-        throughput_score = min(avg_throughput / 1000000, 1)  # 假设最大吞吐量为1Mbps
+        throughput_score = min(avg_throughput / 54000000, 1)  # 假设最大吞吐量为1Mbps
 
         # 计算延迟评分
         avg_delay = sum(self.delay_history[node_id]) / len(self.delay_history[node_id])

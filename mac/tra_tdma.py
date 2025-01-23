@@ -2,6 +2,7 @@ import logging
 import simpy
 from phy.phy import Phy
 from utils import config
+from entities.packet import DataPacket
 
 # 配置日志
 logging.basicConfig(filename='running_log.log',
@@ -66,37 +67,38 @@ class Tdma:
         Args:
             packet: 需要发送的数据包
         """
-        self.current_transmission = packet
-        mac_start_time = self.env.now  # 记录开始等待的时间
-        # 获取当前无人机的时隙
-        assigned_slot = self.slot_schedule[self.my_drone.identifier]
-        current_time = self.env.now
+        if isinstance(packet, DataPacket):
+            self.current_transmission = packet
+            mac_start_time = self.env.now  # 记录开始等待的时间
+            # 获取当前无人机的时隙
+            assigned_slot = self.slot_schedule[self.my_drone.identifier]
+            current_time = self.env.now
 
-        # 计算当前时隙的开始和结束时间
-        slot_start_time = (
-                                      current_time // self.time_slot_duration) * self.time_slot_duration + assigned_slot * self.time_slot_duration
-        slot_end_time = slot_start_time + self.time_slot_duration
+            # 计算当前时隙的开始和结束时间
+            slot_start_time = (
+                                          current_time // self.time_slot_duration) * self.time_slot_duration + assigned_slot * self.time_slot_duration
+            slot_end_time = slot_start_time + self.time_slot_duration
 
-        logging.info(f"UAV {self.my_drone.identifier} assigned to slot {assigned_slot} "
-                     f"from {slot_start_time} to {slot_end_time}")
+            logging.info(f"UAV {self.my_drone.identifier} assigned to slot {assigned_slot} "
+                         f"from {slot_start_time} to {slot_end_time}")
 
-        if current_time >= slot_start_time and current_time < slot_end_time:
-            # 当前是分配的时隙,可以发送
-            logging.info(f"UAV {self.my_drone.identifier} sending packet {packet.packet_id} "
-                         f"in its slot at {self.env.now}")
-            yield self.env.process(self._transmit_packet(packet))
-        else:
-            # 不是当前时隙,等待下一个时隙
-            wait_time = slot_end_time - current_time
-            logging.info(f"UAV {self.my_drone.identifier} waiting {wait_time} for next slot")
-            yield self.env.timeout(wait_time)
-            yield self.env.process(self._transmit_packet(packet))
+            if current_time >= slot_start_time and current_time < slot_end_time:
+                # 当前是分配的时隙,可以发送
+                logging.info(f"UAV {self.my_drone.identifier} sending packet {packet.packet_id} "
+                             f"in its slot at {self.env.now}")
+                yield self.env.process(self._transmit_packet(packet))
+            else:
+                # 不是当前时隙,等待下一个时隙
+                wait_time = slot_end_time - current_time
+                logging.info(f"UAV {self.my_drone.identifier} waiting {wait_time} for next slot")
+                yield self.env.timeout(wait_time)
+                yield self.env.process(self._transmit_packet(packet))
 
 
-        # 计算MAC延迟并记录
-        mac_delay = self.env.now - mac_start_time
-        self.simulator.metrics.mac_delay.append(mac_delay)
-        logging.info(f"MAC delay for packet {packet.packet_id}: {mac_delay} us")
+            # 计算MAC延迟并记录
+            mac_delay = self.env.now - mac_start_time
+            self.simulator.metrics.mac_delay.append(mac_delay)
+            logging.info(f"MAC delay for packet {packet.packet_id}: {mac_delay} us")
     def _transmit_packet(self, packet):
         """
         执行实际的数据包传输

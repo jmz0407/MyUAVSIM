@@ -1,13 +1,14 @@
 import logging
-import simpy
 import math
 from phy.phy import Phy
 from utils import config
 from utils.util_function import euclidean_distance
-from topology.virtual_force.vf_packet import VfPacket
 from entities.packet import DataPacket
 from mac.LinkQualityManager import LinkQualityManager
 from mac.LoadBalancer import LoadBalancer
+from simulator.TrafficGenerator import TrafficRequirement
+
+
 class Stdma:
     def __init__(self, drone):
         self.my_drone = drone
@@ -22,11 +23,18 @@ class Stdma:
         # 链路质量管理
         self.link_quality_manager = LinkQualityManager()
 
+        self.traffic_requirements = {}  # 存储收到的业务需求
         # 添加负载均衡器
         self.load_balancer = LoadBalancer()
+        # from mac.rl_controller.rl_controller import RLSlotController
+        # self.rl_controller = RLSlotController(
+        #     simulator =self.simulator,
+        #     num_nodes=drone.simulator.n_drones,
+        #     num_slots=self.num_slots
+        # )
 
         # 添加负载监控进程
-        self.env.process(self._monitor_load())
+        #self.env.process(self._monitor_load())
 
 
         # 数据流管理
@@ -37,6 +45,62 @@ class Stdma:
         self.env.process(self._slot_synchronization())
         self.env.process(self._delayed_schedule_creation())
         self.env.process(self._monitor_flows())
+
+    def update_slot_schedule(self, new_schedule):
+        """提供给强化学习算法的时隙更新接口"""
+        self.slot_schedule = new_schedule
+        logging.info(f"Updated slot schedule: {self.slot_schedule}")
+
+    def get_network_state(self):
+        """获取当前网络状态，供强化学习使用"""
+        state = {
+            'traffic_loads': self._get_traffic_loads(),
+            'queue_lengths': self._get_queue_lengths(),
+            'link_qualities': self._get_link_qualities(),
+            'node_positions': self._get_node_positions(),
+            'current_schedule': self.slot_schedule
+        }
+        return state
+
+    def _get_traffic_loads(self):
+        """获取各节点的业务负载"""
+        traffic_loads = {}
+        for drone_id in range(self.simulator.n_drones):
+            drone = self.simulator.drones[drone_id]
+            traffic_loads[drone_id] = {
+                'queue_size': drone.transmitting_queue.qsize(),
+                'waiting_packets': len(drone.waiting_list)
+            }
+        return traffic_loads
+
+    def _get_queue_lengths(self):
+        """获取队列长度信息"""
+        return {
+            drone_id: self.simulator.drones[drone_id].transmitting_queue.qsize()
+            for drone_id in range(self.simulator.n_drones)
+        }
+
+    def _get_link_qualities(self):
+        """获取链路质量信息"""
+        link_qualities = {}
+        for i in range(self.simulator.n_drones):
+            for j in range(i+1, self.simulator.n_drones):
+                link_qualities[(i,j)] = self.link_quality_manager.get_link_quality(i, j)
+        return link_qualities
+
+    def _get_node_positions(self):
+        """获取节点位置信息"""
+        return {
+            drone_id: self.simulator.drones[drone_id].coords
+            for drone_id in range(self.simulator.n_drones)
+        }
+
+    def _collect_state_info(self):
+        """定期收集网络状态信息"""
+        while True:
+            self.network_state = self.get_network_state()
+            yield self.env.timeout(config.STATE_COLLECTION_INTERVAL)
+
 
     def _slot_synchronization(self):
         while True:
@@ -119,7 +183,7 @@ class Stdma:
                     can_add = False
                     break
 
-            if can_add and len(schedule[slot]) < 4:  # 保持每个时隙最多3个节点
+            if can_add and len(schedule[slot]) < 3:  # 保持每个时隙最多3个节点
                 schedule[slot].append(node_id)
                 return True
 
@@ -133,12 +197,12 @@ class Stdma:
         """改进的时隙分配算法，确保合理的时隙数量"""
         schedule = {}
         from phy.large_scale_fading import maximum_communication_range
-        interference_range = maximum_communication_range() * 1.5
+        interference_range = maximum_communication_range() * 2
 
         # 初始化时隙数为节点总数的2/3（可以根据实际情况调整）
         self.num_slots = math.ceil(config.NUMBER_OF_DRONES * 2 / 3)
         min_slots = math.ceil(config.NUMBER_OF_DRONES / 3)  # 最少需要的时隙数
-        max_slots = config.NUMBER_OF_DRONES  # 最大时隙数
+        max_slots = config.NUMBER_OF_DRONES # 最大时隙数
 
         # 计算节点兼容性矩阵
         compatibility_matrix = self._calculate_compatibility_matrix(interference_range)
@@ -226,7 +290,24 @@ class Stdma:
 
         avg_interference = interference_score / total_pairs if total_pairs > 0 else 0
         return len(schedule) + avg_interference * 5  # 权重可调
+    def _print_schedule_info(self, schedule):
+        """打印详细的时隙分配信息"""
+        info = "\nSTDMA时隙分配详情:\n" + "-" * 50 + "\n"
 
+        for slot, nodes in schedule.items():
+            info += f"时隙 {slot}:\n"
+            info += f"  节点: {', '.join(f'UAV-{n}' for n in nodes)}\n"
+
+            # 打印该时隙内节点间的链路质量
+            if len(nodes) > 1:
+                info += "  节点间链路质量:\n"
+                for i, node1 in enumerate(nodes):
+                    for node2 in nodes[i + 1:]:
+                        quality = self.link_quality_manager.get_link_quality(node1, node2)
+                        info += f"    UAV-{node1} <-> UAV-{node2}: {quality:.2f}\n"
+
+        info += "-" * 50
+        logging.info(info)
     def _print_schedule_info(self, schedule):
         """打印详细的时隙分配信息"""
         info = "\nSTDMA时隙分配详情:\n" + "-" * 50 + "\n"
@@ -305,14 +386,36 @@ class Stdma:
     #     return schedule
 
     def mac_send(self, packet):
+        """MAC层发送函数"""
         if not self.slot_schedule:
             logging.error("时隙表未创建")
             return
 
-        # 控制包直接发送
-        if isinstance(packet, VfPacket):
-            yield self.env.process(self._transmit_packet(packet))
-            return
+        # if isinstance(packet, TrafficRequirement):
+        #     # 准备所需信息
+        #     traffic_info = {
+        #         'source_id': packet.source_id,
+        #         'dest_id': packet.dest_id,
+        #         'num_packets': packet.num_packets,
+        #         'delay_requirement': packet.delay_requirement,
+        #         'qos_requirement': packet.qos_requirement
+        #     }
+        #
+        #     # 获取当前网络状态
+        #     network_state = {
+        #         'node_positions': self._get_node_positions(),
+        #         'link_qualities': self._get_link_qualities()
+        #     }
+        #
+        #     # 使用模型生成时隙分配方案
+        #     new_schedule = self.slot_allocator.get_slot_schedule(
+        #         traffic_info,
+        #         network_state
+        #     )
+        #
+        #     # 更新时隙分配
+        #     self.slot_schedule = new_schedule
+        #     logging.info(f"基于模型预测更新时隙分配: {new_schedule}")
 
         # 数据包流管理
         if isinstance(packet, DataPacket):

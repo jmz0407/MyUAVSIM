@@ -24,7 +24,7 @@ from energy.energy_model import EnergyModel
 from utils import config
 from utils.util_function import has_intersection
 from phy.large_scale_fading import *
-
+from mac.deep_seek_stdma import DeepSeekStdma
 # config logging
 logging.basicConfig(filename='running_log.log',
                     filemode='w',  # there are two modes: 'a' and 'w'
@@ -100,6 +100,7 @@ class Drone:
         self.direction = random.uniform(0, 2 * np.pi)
 
         random.seed(2025 + self.identifier)
+        self.rng_drone = random.Random(self.identifier + self.simulator.seed)
         self.pitch = random.uniform(-0.05, 0.05)
         self.speed = 10
         self.velocity = [self.speed * math.cos(self.direction) * math.cos(self.pitch),
@@ -120,7 +121,8 @@ class Drone:
         # self.mac_protocol = CsmaCa(self)
         # self.mac_protocol = Tdma(self)  # Use TDMA protocol instead of CSMA/CA
         self.mac_protocol = Stdma(self)
-        # self.mac_protocol = Fprp(self)
+        # self.mac_protocol = Fprp(self)'
+        # self.mac_protocol = DeepSeekStdma(self)
         self.mac_process_dict = dict()
         self.mac_process_finish = dict()
         self.mac_process_count = 0
@@ -135,7 +137,7 @@ class Drone:
         self.residual_energy = config.INITIAL_ENERGY
         self.sleep = False
 
-        self.env.process(self.generate_data_packet())
+        # self.env.process(self.generate_data_packet())
 
         self.env.process(self.feed_packet())
         # self.env.process(self.energy_monitor())
@@ -143,142 +145,170 @@ class Drone:
 
     # def generate_data_packet(self, traffic_pattern='Poisson'):
     #     """
-    #     Generate one data packet, it should be noted that only when the current packet has been sent can the next
-    #     packet be started. When the drone generates a data packet, it will first put it into the "transmitting_queue",
-    #     the drone reads a data packet from the head of the queue every very short time through "feed_packet()" function.
-    #     :param traffic_pattern: characterize the time interval between generating data packets
-    #     :return: none
+    #     生成数据包，支持批量业务流生成
+    #     Args:
+    #         traffic_pattern: 流量模型，支持 'Poisson' 和 'Uniform'
     #     """
-    #
     #     global GLOBAL_DATA_PACKET_ID
     #
     #     while True:
     #         if not self.sleep:
+    #             # 生成大批量数据的时间间隔
     #             if traffic_pattern == 'Uniform':
-    #                 # the drone generates a data packet every 0.5s with jitter
-    #                 yield self.env.timeout(random.randint(500000, 505000))
+    #                 yield self.env.timeout(random.randint(2000000, 2500000))  # 更长的间隔
     #             elif traffic_pattern == 'Poisson':
-    #                 """
-    #                 the process of generating data packets by nodes follows Poisson distribution, thus the generation
-    #                 interval of data packets follows exponential distribution
-    #                 """
-    #
-    #                 rate = 5  # on average, how many packets are generated in 1s
+    #                 rate = 1  # 降低生成频率
     #                 yield self.env.timeout(round(random.expovariate(rate) * 1e6))
     #
-    #             GLOBAL_DATA_PACKET_ID += 1  # data packet id
-    #
-    #             # randomly choose a destination
+    #             # 随机选择目标节点
     #             all_candidate_list = [i for i in range(config.NUMBER_OF_DRONES)]
     #             all_candidate_list.remove(self.identifier)
     #             dst_id = random.choice(all_candidate_list)
-    #             destination = self.simulator.drones[dst_id]  # obtain the destination drone
+    #             destination = self.simulator.drones[dst_id]
     #
+    #             # 一次性生成一批数据包(10-20个)
+    #             batch_size = random.randint(10, 11)
+    #             logging.info(f'UAV: {self.identifier} starts generating batch traffic '
+    #                          f'(size: {batch_size}) to dst: {dst_id} at: {self.env.now}')
+    #
+    #             for i in range(batch_size):
+    #                 GLOBAL_DATA_PACKET_ID += 1
+    #
+    #                 # 创建数据包
+    #                 pkd = DataPacket(self,
+    #                                  dst_drone=destination,
+    #                                  creation_time=self.env.now,
+    #                                  data_packet_id=GLOBAL_DATA_PACKET_ID,
+    #                                  data_packet_length=config.DATA_PACKET_LENGTH,
+    #                                  simulator=self.simulator,
+    #                                  priority=1)  # 高优先级数据包
+    #
+    #                 pkd.transmission_mode = 0  # unicast
+    #                 self.simulator.metrics.datapacket_generated_num += 1
+    #
+    #                 logging.info(f'UAV: {self.identifier} generates packet {i + 1}/{batch_size} '
+    #                              f'(id: {pkd.packet_id}, dst: {destination.identifier}) at: {self.env.now}')
+    #
+    #                 # 加入发送队列
+    #                 pkd.waiting_start_time = self.env.now
+    #                 if self.transmitting_queue.qsize() < self.max_queue_size:
+    #                     self.transmitting_queue.put(pkd)
+    #                     logging.info(f'UAV: {self.identifier}, queue size: {self.transmitting_queue.qsize()}')
+    #                 else:
+    #                     logging.warning(f'UAV: {self.identifier} queue full, batch packet dropped')
+    #                     break  # 如果队列满了就停止生成
+    #
+    #                 # 同一批次的包之间添加小延迟
+    #                 yield self.env.timeout(2000)  # 2ms间隔
+    #         else:
+    #             break
+    # def generate_data_packet(self, traffic_pattern='Poisson'):
+    #     """
+    #     生成一次业务流数据包
+    #     Args:
+    #         traffic_pattern: 流量模型，支持 'Poisson' 和 'Uniform'，
+    #                         虽然只生成一次，但仍保留此参数以保持接口一致性
+    #     """
+    #     global GLOBAL_DATA_PACKET_ID
+    #
+    #     if not self.sleep:
+    #         # 随机选择目标节点
+    #         all_candidate_list = [i for i in range(config.NUMBER_OF_DRONES)]
+    #         all_candidate_list.remove(self.identifier)
+    #         dst_id = random.choice(all_candidate_list)
+    #         destination = self.simulator.drones[dst_id]
+    #
+    #         # 生成一批数据包(10-20个)
+    #         batch_size = random.randint(10, 11)
+    #         logging.info(f'UAV: {self.identifier} starts generating batch traffic '
+    #                      f'(size: {batch_size}) to dst: {dst_id} at: {self.env.now}')
+    #
+    #         for i in range(batch_size):
+    #             GLOBAL_DATA_PACKET_ID += 1
+    #
+    #             # 创建数据包
     #             pkd = DataPacket(self,
     #                              dst_drone=destination,
     #                              creation_time=self.env.now,
     #                              data_packet_id=GLOBAL_DATA_PACKET_ID,
     #                              data_packet_length=config.DATA_PACKET_LENGTH,
-    #                              simulator=self.simulator)
-    #             pkd.transmission_mode = 0  # the default transmission mode of data packet is "unicast" (0)
+    #                              simulator=self.simulator,
+    #                              priority=1)  # 高优先级数据包
     #
+    #             pkd.transmission_mode = 0  # unicast
     #             self.simulator.metrics.datapacket_generated_num += 1
     #
-    #             logging.info('------> UAV: %s generates a data packet (id: %s, dst: %s) at: %s, qsize is: %s',
-    #                          self.identifier, pkd.packet_id, destination.identifier, self.env.now,
-    #                          self.transmitting_queue.qsize())
+    #             logging.info(f'UAV: {self.identifier} generates packet {i + 1}/{batch_size} '
+    #                          f'(id: {pkd.packet_id}, dst: {destination.identifier}) at: {self.env.now}')
     #
+    #             # 加入发送队列
     #             pkd.waiting_start_time = self.env.now
     #             if self.transmitting_queue.qsize() < self.max_queue_size:
     #                 self.transmitting_queue.put(pkd)
-    #                 logging.info('------> UAV: %s, queue size: %s', self.identifier, self.transmitting_queue.qsize())
+    #                 logging.info(f'UAV: {self.identifier}, queue size: {self.transmitting_queue.qsize()}')
     #             else:
-    #                 # the drone has no more room for new packets
-    #                 pass
-    #         else:  # cannot generate packets if "my_drone" is in sleep state
-    #             break
+    #                 logging.warning(f'UAV: {self.identifier} queue full, batch packet dropped')
+    #                 break  # 如果队列满了就停止生成
+    #
+    #             # 同一批次的包之间添加小延迟
+    #             yield self.env.timeout(2000)  # 2ms间隔
+
     def generate_data_packet(self, traffic_pattern='Poisson'):
         """
-        生成数据包，支持批量业务流生成
-        Args:
-            traffic_pattern: 流量模型，支持 'Poisson' 和 'Uniform'
+        Generate one data packet, it should be noted that only when the current packet has been sent can the next
+        packet be started. When the drone generates a data packet, it will first put it into the "transmitting_queue",
+        the drone reads a data packet from the head of the queue every very short time through "feed_packet()" function.
+        :param traffic_pattern: characterize the time interval between generating data packets
+        :return: none
         """
+
         global GLOBAL_DATA_PACKET_ID
 
         while True:
             if not self.sleep:
-                # 生成大批量数据的时间间隔
                 if traffic_pattern == 'Uniform':
-                    yield self.env.timeout(random.randint(2000000, 2500000))  # 更长的间隔
+                    # the drone generates a data packet every 0.5s with jitter
+                    yield self.env.timeout(self.rng_drone.randint(500000, 505000))
                 elif traffic_pattern == 'Poisson':
-                    rate = 1  # 降低生成频率
-                    yield self.env.timeout(round(random.expovariate(rate) * 1e6))
+                    """
+                    the process of generating data packets by nodes follows Poisson distribution, thus the generation 
+                    interval of data packets follows exponential distribution
+                    """
 
-                # 随机选择目标节点
+                    rate = 2  # on average, how many packets are generated in 1s
+                    yield self.env.timeout(round(self.rng_drone.expovariate(rate) * 1e6))
+
+                GLOBAL_DATA_PACKET_ID += 1  # data packet id
+
+                # randomly choose a destination
                 all_candidate_list = [i for i in range(config.NUMBER_OF_DRONES)]
                 all_candidate_list.remove(self.identifier)
-                dst_id = random.choice(all_candidate_list)
-                destination = self.simulator.drones[dst_id]
+                dst_id = self.rng_drone.choice(all_candidate_list)
+                destination = self.simulator.drones[dst_id]  # obtain the destination drone
 
-                # 一次性生成一批数据包(10-20个)
-                batch_size = random.randint(10, 15)
-                logging.info(f'UAV: {self.identifier} starts generating batch traffic '
-                             f'(size: {batch_size}) to dst: {dst_id} at: {self.env.now}')
+                pkd = DataPacket(self,
+                                 dst_drone=destination,
+                                 creation_time=self.env.now,
+                                 data_packet_id=GLOBAL_DATA_PACKET_ID,
+                                 data_packet_length=config.DATA_PACKET_LENGTH,
+                                 simulator=self.simulator)
+                pkd.transmission_mode = 0  # the default transmission mode of data packet is "unicast" (0)
 
-                for i in range(batch_size):
-                    GLOBAL_DATA_PACKET_ID += 1
+                self.simulator.metrics.datapacket_generated_num += 1
 
-                    # 创建数据包
-                    pkd = DataPacket(self,
-                                     dst_drone=destination,
-                                     creation_time=self.env.now,
-                                     data_packet_id=GLOBAL_DATA_PACKET_ID,
-                                     data_packet_length=config.DATA_PACKET_LENGTH,
-                                     simulator=self.simulator,
-                                     priority=1)  # 高优先级数据包
+                logging.info('------> UAV: %s generates a data packet (id: %s, dst: %s) at: %s, qsize is: %s',
+                             self.identifier, pkd.packet_id, destination.identifier, self.env.now,
+                             self.transmitting_queue.qsize())
 
-                    pkd.transmission_mode = 0  # unicast
-                    self.simulator.metrics.datapacket_generated_num += 1
+                pkd.waiting_start_time = self.env.now
 
-                    logging.info(f'UAV: {self.identifier} generates packet {i + 1}/{batch_size} '
-                                 f'(id: {pkd.packet_id}, dst: {destination.identifier}) at: {self.env.now}')
-
-                    # 加入发送队列
-                    pkd.waiting_start_time = self.env.now
-                    if self.transmitting_queue.qsize() < self.max_queue_size:
-                        self.transmitting_queue.put(pkd)
-                        logging.info(f'UAV: {self.identifier}, queue size: {self.transmitting_queue.qsize()}')
-                    else:
-                        logging.warning(f'UAV: {self.identifier} queue full, batch packet dropped')
-                        break  # 如果队列满了就停止生成
-
-                    # 同一批次的包之间添加小延迟
-                    yield self.env.timeout(1000)  # 1ms间隔
-            else:
+                if self.transmitting_queue.qsize() < self.max_queue_size:
+                    self.transmitting_queue.put(pkd)
+                else:
+                    # the drone has no more room for new packets
+                    pass
+            else:  # cannot generate packets if "my_drone" is in sleep state
                 break
-    # def blocking(self):
-    #     """
-    #     The process of waiting for an ACK will block subsequent incoming data packets to simulate the
-    #     "head-of-line blocking problem"
-    #     :return: none
-    #     """
-    #
-    #     if self.enable_blocking:
-    #         if not self.mac_protocol.wait_ack_process_finish:
-    #             flag = False  # there is currently no waiting process for ACK
-    #         else:
-    #             # get the latest process status
-    #             final_indicator = list(self.mac_protocol.wait_ack_process_finish.items())[-1]
-    #
-    #             if final_indicator[1] == 0:
-    #                 flag = True  # indicates that the drone is still waiting
-    #             else:
-    #                 flag = False  # there is currently no waiting process for ACK
-    #     else:
-    #         flag = False
-    #
-    #     return flag
-
     def blocking(self):
         """
         Simulate the head-of-line blocking problem, but without waiting for an ACK,
@@ -416,67 +446,6 @@ class Drone:
         while not temp_queue.empty():
             self.transmitting_queue.put(temp_queue.get())
 
-    # def receive(self):
-    #     """
-    #     Core receiving function of drone
-    #     1. the drone checks its "inbox" to see if there is incoming packet every 5 units (in us) from the time it is
-    #        instantiated to the end of the simulation
-    #     2. update the "inbox" by deleting the inconsequential data packet
-    #     3. then the drone will detect if it receives a (or multiple) complete data packet(s)
-    #     4. SINR calculation
-    #     :return: none
-    #     """
-    #
-    #     while True:
-    #         if not self.sleep:
-    #             # delete packets that have been processed and do not interfere with
-    #             # the transmission and reception of all current packets
-    #             self.update_inbox()
-    #
-    #             flag, all_drones_send_to_me, time_span, potential_packet = self.trigger()
-    #
-    #             if flag:
-    #                 # find the transmitters of all packets currently transmitted on the channel
-    #                 transmitting_node_list = []
-    #                 for drone in self.simulator.drones:
-    #                     for item in drone.inbox:
-    #                         packet = item[0]
-    #                         insertion_time = item[1]
-    #                         transmitter = item[2]
-    #                         transmitting_time = packet.packet_length / config.BIT_RATE * 1e6
-    #                         interval = [insertion_time, insertion_time + transmitting_time]
-    #
-    #                         for interval2 in time_span:
-    #                             if has_intersection(interval, interval2):
-    #                                 transmitting_node_list.append(transmitter)
-    #
-    #                 transmitting_node_list = list(set(transmitting_node_list))  # remove duplicates
-    #
-    #                 sinr_list = sinr_calculator(self, all_drones_send_to_me, transmitting_node_list)
-    #
-    #                 # receive the packet of the transmitting node corresponding to the maximum SINR
-    #                 max_sinr = max(sinr_list)
-    #                 if max_sinr >= config.SNR_THRESHOLD:
-    #                     which_one = sinr_list.index(max_sinr)
-    #
-    #                     pkd = potential_packet[which_one]
-    #
-    #                     if pkd.get_current_ttl() < config.MAX_TTL:
-    #                         sender = all_drones_send_to_me[which_one]
-    #
-    #                         logging.info('Packet %s from UAV: %s is received by UAV: %s at time: %s, sinr is: %s',
-    #                                      pkd.packet_id, sender, self.identifier, self.simulator.env.now, max_sinr)
-    #
-    #                         self.routing_protocol.packet_reception(pkd, sender)
-    #                     else:
-    #                         logging.info('Packet %s is dropped due to exceeding max TTL', pkd.packet_id)
-    #                 else:  # sinr is lower than threshold
-    #                     self.simulator.metrics.collision_num += len(sinr_list)
-    #                     pass
-    #
-    #             yield self.env.timeout(5)
-    #         else:
-    #             break
     def receive(self):
         """通用的接收函数"""
         while True:

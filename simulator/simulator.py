@@ -6,8 +6,10 @@ from simulator.metrics import Metrics
 from mobility import start_coords
 from utils import config
 from visualization.scatter import scatter_plot
-
-
+from simulator.TrafficGenerator import TrafficGenerator
+from simulator.TrafficGenerator import TrafficRequirement
+import simpy
+import logging
 class Simulator:
     """
     Description: simulation environment
@@ -59,10 +61,65 @@ class Simulator:
             self.drones.append(drone)
 
         scatter_plot(self)
+        # 创建业务流生成器
+        # 创建业务流生成器
+        self.traffic_generator = TrafficGenerator(self)
+
+        # 生成业务流：从节点0到节点1生成10个数据包，间隔10微秒
+        # self.traffic_generator.generate_traffic(
+        #     source_id=9,
+        #     dest_id=12,
+        #     num_packets=10,
+        #     packet_interval=10000
+        # )
+        # 在需要生成业务流时:
+        self.generate_traffic_requirement(
+            source_id=12,
+            dest_id=9,
+            num_packets=10,
+            delay_req=1000,  # ms
+            qos_req=0.9
+        )
+
+        self.generate_traffic_requirement(
+            source_id=4,
+            dest_id=10,
+            num_packets=10,
+            delay_req=1000,  # ms
+            qos_req=0.9
+        )
 
         self.env.process(self.show_performance())
         self.env.process(self.show_time())
+    def generate_traffic_requirement(self, source_id, dest_id, num_packets,
+                                         delay_req, qos_req):
+        """生成业务需求消息"""
+        requirement = TrafficRequirement(
+            source_id=source_id,
+            dest_id=dest_id,
+            num_packets=num_packets,
+            delay_req=delay_req,
+            qos_req=qos_req
+        )
+        requirement.creation_time = self.env.now
 
+        # 发送给源节点的MAC层
+        source_drone = self.drones[source_id]
+        source_drone.transmitting_queue.put(requirement)
+
+        # 等待时隙分配完成后再生成实际的业务流
+        def generate_actual_traffic():
+            # 确保时隙已分配
+            yield self.env.timeout(500000)
+
+            # 生成实际的数据包流
+            self.traffic_generator.generate_traffic(
+                source_id=source_id,
+                dest_id=dest_id,
+                num_packets=num_packets
+            )
+        logging.info('Generating traffic requirement from %s to %s', source_id, dest_id)
+        self.env.process(generate_actual_traffic())
     def show_time(self):
         while True:
             print('At time: ', self.env.now / 1e6, ' s.')
