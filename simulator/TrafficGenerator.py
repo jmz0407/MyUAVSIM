@@ -2,9 +2,11 @@ import random
 from utils import config
 from entities.packet import DataPacket
 import logging
+from entities.packet import Packet
 
 # 全局数据包ID
 GLOBAL_DATA_PACKET_ID = 0
+GL_ID_TRAFFIC_REQUIREMENT = 60000
 class TrafficGenerator:
     """业务流生成器"""
 
@@ -12,6 +14,7 @@ class TrafficGenerator:
         self.simulator = simulator
         self.env = simulator.env
         self.traffic_patterns = {}
+        self.active_requirements = []  # 存储活跃的业务需求
 
     def setup_cbr_traffic(self, source_id, dest_id, data_rate,
                           packet_size=1024,  # 数据包大小(bytes)
@@ -200,7 +203,7 @@ class TrafficGenerator:
             if burst < pattern['num_bursts'] - 1:
                 yield self.env.timeout(pattern['burst_interval'])
 
-    def generate_traffic(self, source_id, dest_id, num_packets, packet_interval=10000):
+    def generate_traffic(self, source_id, dest_id, num_packets, packet_interval=1000):
         source_drone = self.simulator.drones[source_id]
         dest_drone = self.simulator.drones[dest_id]
 
@@ -240,25 +243,34 @@ class TrafficGenerator:
 
                 yield self.env.timeout(packet_interval)
 
+
         # 启动生成过程
         self.env.process(generate())
 
-class TrafficRequirement:
-    def __init__(self, source_id, dest_id, num_packets, delay_req, qos_req):
+class TrafficRequirement(Packet):
+    global GL_ID_TRAFFIC_REQUIREMENT
+    GL_ID_TRAFFIC_REQUIREMENT += 1
+    def __init__(self, source_id, dest_id, num_packets, delay_req, qos_req, simulator, creation_time = 0, data_packet_length = 0,data_packet_id = GL_ID_TRAFFIC_REQUIREMENT):
+        super().__init__(data_packet_id, data_packet_length, creation_time, simulator)
         self.source_id = source_id
         self.dest_id = dest_id
         self.num_packets = num_packets
         self.delay_requirement = delay_req
         self.qos_requirement = qos_req
-        self.packet_id = None  # 将由simulator设置
+        self.packet_id = 11111  # 将由simulator设置
         self.creation_time = None  # 将由simulator设置
         self.message_type = 'traffic_requirement'
+        self.dst_id = dest_id
+        self.src_drone = None
+        self.dst_drone = None
+        self.data_packet_id = data_packet_id
         # 添加所需属性
         self.deadline = 1e6  # 设置一个较大的默认值，单位为ns
         self.number_retransmission_attempt = {i: 0 for i in range(config.NUMBER_OF_DRONES)}  # 用于重传次数统计
         self.next_hop_id = None  # 用于路由
         self.routing_path = []   # 用于记录路由路径
         self.waiting_start_time = None  # 等待开始时间
+        self.transmission_mode = 0  # 0: unicast, 1: multicast
 
 
 

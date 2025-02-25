@@ -8,8 +8,8 @@ MAP_LENGTH = 500  # m, length of the map
 MAP_WIDTH = 500  # m, width of the map
 MAP_HEIGHT = 500  # m, height of the map
 SIM_TIME = 5 * 1e6  # us, total simulation time
-NUMBER_OF_DRONES = 15  # number of drones in the network
-STATIC_CASE = 1  # whether to simulate a static network
+NUMBER_OF_DRONES = 10  # number of drones in the network
+STATIC_CASE = 0  # whether to simulate a static network
 HETEROGENEOUS = 0  # heterogeneous network support (in terms of speed)
 LOGGING_LEVEL = logging.INFO  # whether to print the detail information during simulation
 
@@ -35,7 +35,7 @@ LIGHT_SPEED = 3 * 1e8  # light speed (m/s)
 CARRIER_FREQUENCY = IEEE_802_11['carrier_frequency']  # carrier frequency (Hz)
 NOISE_POWER = 6 * 1e-11  # noise power (Watt)
 RADIO_SWITCHING_TIME = 100  # us, the switching time of the transceiver mode
-SNR_THRESHOLD = 6  # dB
+SNR_THRESHOLD = 6 # dB
 
 # ---------------------- packet parameters ----------------------- #
 MAX_TTL = NUMBER_OF_DRONES + 1  # maximum time-to-live value
@@ -64,7 +64,7 @@ GL_ID_HELLO_PACKET = 10000
 GL_ID_VF_PACKET = 30000
 GL_ID_GRAD_MESSAGE = 40000
 GL_ID_CHIRP_PACKET = 50000
-
+GL_ID_TRAFFIC_REQUIREMENT = 60000
 # ------------------ physical layer parameters ------------------- #
 BIT_RATE = IEEE_802_11['bit_rate']
 BIT_TRANSMISSION_TIME = 1/BIT_RATE * 1e6
@@ -91,3 +91,30 @@ MIN_INFO_FRAME_SLOTS = 10
 DATA_CHANNEL_RATE = BIT_RATE  # bps, 数据通道速率
 CONTROL_CHANNEL_RATE = BIT_RATE  # bps, 控制通道速率
 SLOT_ALLOCATION_DELAY = 1000  # μs, 时隙分配延迟
+
+REUSE_DISTANCE = 200  # 复用同一时隙的最小间距(米)
+CLUSTER_SIZE = 2      # 分簇复用组数
+TOTAL_CLUSTERS = 5
+
+
+# 路由参数
+# config.py
+
+# GNN-DRL参数
+GNN_HIDDEN_DIM = 64
+DRL_GAMMA = 0.99
+DRL_EPSILON = 0.1
+DRL_BUFFER_SIZE = 10000
+DRL_BATCH_SIZE = 32
+DRL_LEARNING_RATE = 0.001
+
+# 性能监控参数
+MONITOR_INTERVAL = 1000000  # 1s
+
+# 多径传输配置
+MULTIPATH_ENABLED = True
+MAX_PATHS = 3  # 最大路径数
+PATH_SELECTION_STRATEGY = 'parallel'  # 'parallel' 或 'backup'
+
+# 例如，DSDV 更新间隔设置为 1e6 时间单位（具体单位根据您的仿真环境确定）
+DSDV_UPDATE_INTERVAL = 1e6

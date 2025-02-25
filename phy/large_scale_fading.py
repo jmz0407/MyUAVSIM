@@ -77,8 +77,9 @@ def sinr_calculator(my_drone, main_drones_list, all_transmitting_drones_list):
 
     # 检查是否存在多个同时传输
     if len(all_transmitting_drones_list) > 1:
-        logging.warning(f"Multiple transmissions detected in TDMA at time {simulator.env.now}")
-        logging.warning(f"Transmitting nodes: {all_transmitting_drones_list}")
+        pass
+        # logging.warning(f"Multiple transmissions detected in TDMA at time {simulator.env.now}")
+        # logging.warning(f"Transmitting nodes: {all_transmitting_drones_list}")
 
     for transmitter_id in main_drones_list:
         transmitter = simulator.drones[transmitter_id]
@@ -89,12 +90,12 @@ def sinr_calculator(my_drone, main_drones_list, all_transmitting_drones_list):
 
         # TDMA中只考虑噪声，不应该有干扰
         sinr = 10 * math.log10(receive_power / noise_power)
-        logging.info('The SNR of main link is: %s', sinr)
+        # logging.info('The SNR of main link is: %s', sinr)
         sinr_list.append(sinr)
 
         # 记录通信距离
         distance = euclidean_distance(transmitter.coords, receiver.coords)
-        logging.info('Communication distance: %s m', distance)
+        # logging.info('Communication distance: %s m', distance)
 
     return sinr_list
 
@@ -129,10 +130,10 @@ def stdma_sinr_calculator(my_drone, main_drones_list, all_transmitting_drones_li
             #              transmit_power * interference_path_loss)
 
         sinr = 10 * math.log10(receive_power / (noise_power + interference_power))
-        # logging.info('节点 %s 到接收器 %s 的SINR: %.2f dB',
-        #              transmitter_id, receiver.identifier, sinr)
+        logging.info('节点 %s 到接收器 %s 的SINR: %.2f dB',
+                      transmitter_id, receiver.identifier, sinr)
 
-        if sinr >= config.SNR_THRESHOLD:
+        if sinr != config.SNR_THRESHOLD:
             logging.info('节点 %s 的数据包成功被节点 %s 接收',
                          transmitter_id, receiver.identifier)
         else:

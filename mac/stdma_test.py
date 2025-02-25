@@ -8,8 +8,8 @@ from mac.LinkQualityManager import LinkQualityManager
 from mac.LoadBalancer import LoadBalancer
 from simulator.TrafficGenerator import TrafficRequirement
 import traceback
-import copy
-class Stdma:
+
+class Stdma_Test:
     def __init__(self, drone):
         self.my_drone = drone
         self.simulator = drone.simulator
@@ -46,8 +46,7 @@ class Stdma:
 
 
         # 初始化强化学习组件
-        # self.use_rl, self.rl_model, self.rl_env = self._initialize_rl_controller()
-        self.use_rl, self.rl_model, self.rl_env = self._initialize_ppo_rl_controller()
+        self.use_rl, self.rl_model, self.rl_env = self._initialize_rl_controller()
 
 
         # # 创建RL环境和控制器
@@ -111,47 +110,6 @@ class Stdma:
         """提供给强化学习算法的时隙更新接口"""
         self.slot_schedule = new_schedule
         logging.info(f"Updated slot schedule: {self.slot_schedule}")
-
-    # 在stdma.py中需要修改的部分
-    def _initialize_ppo_rl_controller(self):
-        """初始化PPO控制器"""
-        try:
-            from stable_baselines3 import PPO
-            import os
-
-            # 构建模型路径
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            # model_dir = os.path.join(current_dir, "rl_controller/logs/")
-            # # 找到最新的模型目录
-            # model_dirs = [d for d in os.listdir(model_dir) if d.startswith("STDMA_PPO_")]
-            # if not model_dirs:
-            #     return False, None, None
-            #
-            # latest_model_dir = max(model_dirs)
-            # model_path = os.path.join(model_dir, latest_model_dir, "best_model/best_model.zip")
-            # 构建模型路径
-            model_dir = os.path.join(current_dir, "rl_controller/logs/STDMA_PPO_20250207_112404/best_model")
-            model_path = os.path.join(model_dir, "best_model.zip")
-
-            if os.path.exists(model_path):
-                rl_model = PPO.load(model_path)
-                use_rl = True
-                logging.info(f"成功加载PPO模型: {model_path}")
-                # 创建RL环境
-                from mac.rl_controller.rl_environment import StdmaEnv
-                rl_env = StdmaEnv(
-                    simulator=self.simulator,
-                    num_nodes=self.my_drone.simulator.n_drones,
-                    num_slots=self.num_slots
-                )
-
-                return use_rl, rl_model, rl_env
-            else:
-                return False, None, None
-
-        except Exception as e:
-            logging.error(f"初始化PPO控制器失败: {str(e)}")
-            return False, None, None
     def _initialize_rl_controller(self):
             """初始化强化学习控制器"""
             try:
@@ -175,10 +133,13 @@ class Stdma:
 
                     # 创建RL环境
                     from mac.rl_controller.rl_environment import StdmaEnv
+                    from mac.rl_controller.rl_controller import StdmaFeatureExtractor  # 引入特征提取器
+                    feature_extractor = StdmaFeatureExtractor(observation_space=None, features_dim=256, num_nodes = self.num_nodes)  # 设置特征维度
                     rl_env = StdmaEnv(
                         simulator=self.simulator,
                         num_nodes=self.my_drone.simulator.n_drones,
-                        num_slots=self.num_slots
+                        num_slots=self.num_slots,
+                        feature_extractor=feature_extractor  # 传入特征提取器
                     )
 
                     return use_rl, rl_model, rl_env
@@ -346,63 +307,6 @@ class Stdma:
         self.num_slots += 1
         return True
 
-    # def _create_slot_schedule(self):
-    #     """改进的时隙分配算法，确保合理的时隙数量"""
-    #     schedule = {}
-    #     from phy.large_scale_fading import maximum_communication_range
-    #     interference_range = maximum_communication_range() * 2
-    #
-    #     # 初始化时隙数为节点总数的2/3（可以根据实际情况调整）
-    #     self.num_slots = math.ceil(config.NUMBER_OF_DRONES * 2 / 3)
-    #     min_slots = math.ceil(config.NUMBER_OF_DRONES / 3)  # 最少需要的时隙数
-    #     max_slots = config.NUMBER_OF_DRONES # 最大时隙数
-    #
-    #     # 计算节点兼容性矩阵
-    #     compatibility_matrix = self._calculate_compatibility_matrix(interference_range)
-    #
-    #     best_schedule = None
-    #     best_metric = float('inf')  # 用于评估分配方案的优劣
-    #
-    #     # 尝试不同的时隙数，找到最优解
-    #     for num_slots in range(min_slots, max_slots + 1):
-    #         current_schedule = {}
-    #         unassigned = set(range(config.NUMBER_OF_DRONES))
-    #
-    #         # 为每个时隙分配节点
-    #         for slot in range(num_slots):
-    #             current_schedule[slot] = []
-    #             candidates = list(unassigned)
-    #
-    #             # 根据干扰关系选择合适的节点组合
-    #             candidates.sort(key=lambda x: sum(compatibility_matrix[x][y]
-    #                                               for y in unassigned), reverse=True)
-    #
-    #             for drone_id in candidates[:]:
-    #                 # 检查是否可以加入当前时隙
-    #                 if self._can_add_to_slot(drone_id, current_schedule[slot],
-    #                                          compatibility_matrix):
-    #                     current_schedule[slot].append(drone_id)
-    #                     unassigned.remove(drone_id)
-    #
-    #         # 如果所有节点都已分配且评估指标更好，更新最优解
-    #         if not unassigned:
-    #             metric = self._evaluate_schedule(current_schedule, compatibility_matrix)
-    #             if metric < best_metric:
-    #                 best_metric = metric
-    #                 best_schedule = current_schedule
-    #                 self.num_slots = num_slots
-    #
-    #     if best_schedule:
-    #         schedule = best_schedule
-    #         logging.info(f"找到最优时隙分配方案，使用 {self.num_slots} 个时隙")
-    #     else:
-    #         logging.warning("未找到有效的时隙分配方案，使用默认分配")
-    #         schedule = self._create_tra_slot_schedule()
-    #
-    #     self._print_schedule_info(schedule)
-    #     return schedule
-    #
-    # 在stdma.py中修改_create_slot_schedule方法：
     def _create_slot_schedule(self):
         """使用RL模型生成时隙分配"""
         if self.use_rl and self.rl_model:
@@ -592,11 +496,10 @@ class Stdma:
         if not self.slot_schedule:
             logging.error("时隙表未创建")
             return
-        logging.info(f"Time {self.env.now}:UAV{self.my_drone.identifier} MAC layer received {type(packet).__name__}")
-
+        logging.info(f"Time {self.env.now}: MAC layer received {type(packet).__name__}")
+        self.handle_control_packet(packet, self.my_drone.identifier)
         if isinstance(packet, TrafficRequirement):
             logging.info(f"当前时隙表: {self.slot_schedule}")
-
             # 准备所需信息
             traffic_info = {
                 'source_id': packet.source_id,
@@ -606,16 +509,11 @@ class Stdma:
                 'qos_requirement': packet.qos_requirement,
                 'route_path' : packet.routing_path
             }
-            #日志记录traffic
-            logging.info(f"UAV{self.my_drone.identifier} received traffic requirement: {traffic_info}")
-            yield self.env.process(self._transmit_packet(packet))
+
             try:
                 if hasattr(self, 'use_rl') and self.use_rl and self.rl_model is not None:
                     # 使用RL重新分配时隙
-                    # copy_packet = copy.deepcopy(packet)
                     obs = self.rl_env.reset(requirement_data=packet)[0]
-                    #记录当前的业务路径
-                    logging.info(f"UAV{self.my_drone.identifier} 业务路径: {packet.routing_path}")
                     new_schedule = {}
 
                     for node in range(self.simulator.n_drones):
@@ -631,10 +529,10 @@ class Stdma:
 
                     # 更新时隙分配
                     self.slot_schedule = new_schedule
-                    for node in self.simulator.drones:
-                        if node.identifier != self.my_drone.identifier:
-                            node.mac_protocol.slot_schedule = self.slot_schedule
-                            logging.info(f"{node.identifier}基于RL模型更新时隙分配: {new_schedule}")
+                    logging.info(f"基于RL模型更新时隙分配: {new_schedule}")
+                    if packet.routing_path:
+                        # 将优化后的时隙分配广播给其他节点
+                        self._broadcast_new_schedule()
                 else:
                     # 使用传统方法重新分配时隙
                     self.slot_schedule = self._create_tra_slot_schedule()
@@ -651,31 +549,30 @@ class Stdma:
                     if isinstance(nodes, int):
                         self.slot_schedule[slot] = [nodes]
 
-
         # 数据包流管理
         if isinstance(packet, DataPacket):
-            # flow_id = f"flow_{packet.src_drone.identifier}_{packet.dst_drone.identifier}"
-            # self.flow_queue.setdefault(flow_id, []).append(packet)
-            # self.flow_stats.setdefault(flow_id, {
-            #     'sent_packets': 0,
-            #     'avg_delay': 0,
-            #     'throughput': 0,
-            #     'queue_size': 0
-            # })
+            flow_id = f"flow_{packet.src_drone.identifier}_{packet.dst_drone.identifier}"
+            self.flow_queue.setdefault(flow_id, []).append(packet)
+            self.flow_stats.setdefault(flow_id, {
+                'sent_packets': 0,
+                'avg_delay': 0,
+                'throughput': 0,
+                'queue_size': 0
+            })
 
             mac_start_time = self.env.now
 
-            # # 确保时隙表中的值都是列表
-            # schedule = {slot: (nodes if isinstance(nodes, list) else [nodes])
-            #             for slot, nodes in self.slot_schedule.items()}
+            # 确保时隙表中的值都是列表
+            schedule = {slot: (nodes if isinstance(nodes, list) else [nodes])
+                        for slot, nodes in self.slot_schedule.items()}
 
             # 使用修正后的时隙表查找分配
-            assigned_slot = next((slot for slot, drones in self.slot_schedule.items()
+            assigned_slot = next((slot for slot, drones in schedule.items()
                                   if self.my_drone.identifier in drones), None)
-            # logging.info(f"UAV{self.my_drone.identifier} assigned to slot {assigned_slot}")
-            # if assigned_slot is None:
-            #     logging.error(f"无人机{self.my_drone.identifier}未分配时隙")
-            #     return
+
+            if assigned_slot is None:
+                logging.error(f"无人机{self.my_drone.identifier}未分配时隙")
+                return
 
             current_time = self.env.now
             slot_start = (
@@ -688,20 +585,165 @@ class Stdma:
                 yield self.env.timeout(self.num_slots * self.time_slot_duration - (current_time - slot_start))
 
             yield self.env.process(self._transmit_packet(packet))
-            #mac时延
-            logging.info(f"UAV{self.my_drone.identifier} MAC 时延: {self.env.now - current_time}")
-            self.simulator.metrics.mac_delay.append((self.env.now - current_time) / 1e3)
+            self.simulator.metrics.mac_delay.append((self.env.now - mac_start_time) / 1e3)
+
+    def _apply_new_schedule(self, new_schedule):
+        """应用新的时隙分配方案"""
+        # 检查当前是否正在传输
+        if self.current_transmission:
+            # 等待当前传输完成
+            current_slot_end = ((self.env.now // self.time_slot_duration) + 1) * self.time_slot_duration
+            wait_time = current_slot_end - self.env.now
+            if wait_time > 0:
+                yield self.env.timeout(wait_time)
+
+        # 更新时隙分配
+        self.slot_schedule = new_schedule
+        self.optimized_schedule = new_schedule
+
+        # 重新同步时隙
+        self.current_slot = (self.env.now // self.time_slot_duration) % self.num_slots
+
+        # 更新本地调度参数
+        self._update_scheduling_parameters()
+    def _update_scheduling_parameters(self):
+        """更新与时隙调度相关的本地参数"""
+        # 获取本节点的新时隙
+        my_slot = self.slot_schedule[self.my_drone.identifier]
+
+        # 更新传输时间和等待时间的计算参数
+        current_frame = self.env.now // (self.time_slot_duration * self.num_slots)
+        self.next_transmission_time = (current_frame * self.num_slots + my_slot) * self.time_slot_duration
+
+        if self.next_transmission_time < self.env.now:
+            self.next_transmission_time += (self.num_slots * self.time_slot_duration)
+    def _send_schedule_ack(self, source_id):
+        """发送时隙分配确认消息"""
+
+        class ScheduleAckMessage:
+            def __init__(self, source_id, target_id, creation_time, simulator):
+                self.source_id = source_id
+                self.target_id = target_id
+                self.creation_time = creation_time
+                self.packet_id = f"slot_ack_{creation_time}"
+                self.packet_length = 500  # 较小的确认消息
+                self.deadline = config.PACKET_LIFETIME
+                self.number_retransmission_attempt = {i: 0 for i in range(config.NUMBER_OF_DRONES)}
+                self.transmission_mode = 0  # 单播模式
+                self.simulator = simulator
+                self.next_hop_id = target_id
+                self.waiting_start_time = creation_time
+                self.msg_type = 'slot_schedule_ack'
+
+            def increase_ttl(self):
+                pass
+
+            def get_current_ttl(self):
+                return 0
+
+        # 创建确认消息
+        ack_msg = ScheduleAckMessage(
+            source_id=self.my_drone.identifier,
+            target_id=source_id,
+            creation_time=self.env.now,
+            simulator=self.simulator
+        )
+
+        # 发送确认消息
+        if self.my_drone.transmitting_queue.qsize() < self.my_drone.max_queue_size:
+            self.my_drone.transmitting_queue.put(ack_msg)
+            logging.info(f"Drone {self.my_drone.identifier} sent schedule ACK to Drone {source_id}")
         else:
-            yield self.env.process(self._transmit_packet(packet))
+            logging.warning(f"Queue full, schedule ACK to Drone {source_id} dropped")
+        # 新增:存储优化后的时隙分配
+        self.optimized_schedule = {}
 
+        self.env.process(self._slot_synchronization())
+    def handle_control_packet(self, packet, sender):
+        """处理控制包，包括业务需求消息和时隙分配消息"""
+        if hasattr(packet, 'msg_type') and packet.msg_type == 'slot_schedule':
+            logging.info(f"Time {self.env.now}: Drone {self.my_drone.identifier} "
+                         f"received new slot schedule from Drone {sender}")
 
+            # 验证发送者的合法性和消息的新鲜度
+            if packet.source_id != self.my_drone.identifier:  # 不处理自己发送的消息
+                # 验证新的时隙分配方案
+                is_valid = True
+                if is_valid:
+                    # 备份当前时隙以便回滚
+                    old_schedule = self.slot_schedule.copy()
+                    try:
+                        # 应用新的时隙分配
+                        self._apply_new_schedule(packet.schedule)
+
+                        # 发送确认消息给源节点
+                        self._send_schedule_ack(packet.source_id)
+
+                        logging.info(
+                            f"Drone {self.my_drone.identifier} successfully updated slot schedule: {self.slot_schedule}")
+
+                        # 继续转发时隙分配消息，确保网络同步
+                        if packet.number_retransmission_attempt[self.my_drone.identifier] == 0:
+                            packet.number_retransmission_attempt[self.my_drone.identifier] += 1
+                            if self.my_drone.transmitting_queue.qsize() < self.my_drone.max_queue_size:
+                                self.my_drone.transmitting_queue.put(packet)
+                                logging.info(f"Drone {self.my_drone.identifier} forwarding slot schedule message")
+
+                    except Exception as e:
+                        # 如果更新过程出错，回滚到旧的时隙分配
+                        self.slot_schedule = old_schedule
+                        self.optimized_schedule = old_schedule
+                        logging.error(f"Drone {self.my_drone.identifier} failed to update slot schedule: {str(e)}")
+                else:
+                    logging.warning(f"Drone {self.my_drone.identifier} received invalid slot schedule from {sender}")
+    def _broadcast_new_schedule(self):
+        """广播新的时隙分配给网络中的其他节点"""
+
+        class SlotScheduleMessage:
+            def __init__(self, source_id, schedule, creation_time, simulator):
+                self.source_id = source_id
+                self.schedule = schedule
+                self.creation_time = creation_time
+                self.packet_id = f"slot_schedule_{creation_time}"
+                self.packet_length = 1000  # 固定长度
+                self.deadline = config.PACKET_LIFETIME
+                self.number_retransmission_attempt = {i: 0 for i in range(config.NUMBER_OF_DRONES)}
+                self.transmission_mode = 1  # 广播模式
+                self.simulator = simulator
+                self.next_hop_id = None
+                self.waiting_start_time = creation_time
+                self.msg_type = 'slot_schedule'
+
+            def increase_ttl(self):
+                pass
+
+            def get_current_ttl(self):
+                return 0
+
+        # 创建时隙分配消息
+        schedule_msg = SlotScheduleMessage(
+            source_id=self.my_drone.identifier,
+            schedule=self.slot_schedule,
+            creation_time=self.env.now,
+            simulator=self.simulator
+        )
+
+        logging.info(f"Drone {self.my_drone.identifier} broadcasting new slot schedule at {self.env.now}")
+
+        # 将消息加入发送队列
+        if self.my_drone.transmitting_queue.qsize() < self.my_drone.max_queue_size:
+            self.my_drone.transmitting_queue.put(schedule_msg)
+            logging.info(f"Slot schedule message queued for broadcast from Drone {self.my_drone.identifier}")
+        else:
+            logging.warning(f"Queue full, slot schedule message dropped from Drone {self.my_drone.identifier}")
+
+        return schedule_msg
     def _transmit_packet(self, packet):
         self.current_transmission = packet
 
         if packet.transmission_mode == 0:
             packet.increase_ttl()
             self.phy.unicast(packet, packet.next_hop_id)
-            logging.info(f"Time {self.env.now}:UAV{self.my_drone.identifier} transmitted {type(packet).__name__} to {packet.next_hop_id}")
             yield self.env.timeout(packet.packet_length / config.BIT_RATE * 1e6)
 
         elif packet.transmission_mode == 1:
@@ -711,7 +753,7 @@ class Stdma:
 
         if isinstance(packet, DataPacket):
             flow_id = f"flow_{packet.src_drone.identifier}_{packet.dst_drone.identifier}"
-            # self.flow_stats[flow_id]['sent_packets'] += 1
-            # self.flow_queue[flow_id].remove(packet)
+            self.flow_stats[flow_id]['sent_packets'] += 1
+            self.flow_queue[flow_id].remove(packet)
 
         self.current_transmission = None

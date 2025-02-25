@@ -2,6 +2,7 @@ import random
 from utils import config
 from phy.large_scale_fading import maximum_communication_range
 
+
 def get_random_start_point_3d(sim_seed):
     start_position = []
     for i in range(config.NUMBER_OF_DRONES):

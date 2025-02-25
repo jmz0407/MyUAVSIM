@@ -9,12 +9,13 @@ from routing.dsdv.dsdv import Dsdv
 from routing.gpsr.gpsr import Gpsr
 from routing.grad.grad import Grad
 from routing.opar.opar import Opar
+from routing.opar.new_opar import NewOpar
 from routing.q_routing.q_routing import QRouting
 from mac.csma_ca import CsmaCa
-from mac.tra_tdma import Tdma
+from mac.reuse_slot_tdma import Tdma
 # from mac.self_tdma import Stdma
 from mac.stdma import Stdma
-from mac.FPRP import Fprp
+from mac.FPRP import FPRP
 from mac.pure_aloha import PureAloha
 from mobility.gauss_markov_3d import GaussMarkov3D
 from mobility.random_walk_3d import RandomWalk3D
@@ -25,6 +26,10 @@ from utils import config
 from utils.util_function import has_intersection
 from phy.large_scale_fading import *
 from mac.deep_seek_stdma import DeepSeekStdma
+from simulator.TrafficGenerator import TrafficRequirement
+from mac.tra_tdma import Tra_Tdma
+from mac.stdma_test import Stdma_Test
+from routing.opar.last_opar import LastOpar
 # config logging
 logging.basicConfig(filename='running_log.log',
                     filemode='w',  # there are two modes: 'a' and 'w'
@@ -35,6 +40,56 @@ logging.basicConfig(filename='running_log.log',
 GLOBAL_DATA_PACKET_ID = 0
 
 
+class MultiPathQueue:
+    """支持多路径和广播的队列结构"""
+
+    def __init__(self, max_size):
+        self.max_size = max_size
+        self.queues = {}  # 每个目的地的队列
+        self.broadcast_queue = queue.Queue()  # 广播报文队列
+        self.total_size = 0
+
+    def put(self, packet):
+        """将数据包放入对应队列"""
+        if self.total_size >= self.max_size:
+            return False
+
+        # 处理广播报文 (VfPacket 等)
+        if not hasattr(packet, 'dst_drone'):
+            self.broadcast_queue.put(packet)
+            self.total_size += 1
+            return True
+
+        # 处理单播数据包
+        dst_id = packet.dst_drone.identifier
+        if dst_id not in self.queues:
+            self.queues[dst_id] = queue.Queue()
+
+        self.queues[dst_id].put(packet)
+        self.total_size += 1
+        return True
+
+    def get(self):
+        """获取下一个要发送的数据包"""
+        # 优先处理广播队列
+        if not self.broadcast_queue.empty():
+            self.total_size -= 1
+            return self.broadcast_queue.get()
+
+        # 轮询目的地队列
+        for dst_id, q in self.queues.items():
+            if not q.empty():
+                self.total_size -= 1
+                return q.get()
+        return None
+
+    def qsize(self):
+        """返回总队列大小"""
+        return self.total_size
+
+    def empty(self):
+        """检查是否所有队列都为空"""
+        return self.total_size == 0
 class Drone:
     """
     Drone implementation
@@ -102,7 +157,7 @@ class Drone:
         random.seed(2025 + self.identifier)
         self.rng_drone = random.Random(self.identifier + self.simulator.seed)
         self.pitch = random.uniform(-0.05, 0.05)
-        self.speed = 10
+        self.speed = 20
         self.velocity = [self.speed * math.cos(self.direction) * math.cos(self.pitch),
                          self.speed * math.sin(self.direction) * math.cos(self.pitch),
                          self.speed * math.sin(self.pitch)]
@@ -121,15 +176,18 @@ class Drone:
         # self.mac_protocol = CsmaCa(self)
         # self.mac_protocol = Tdma(self)  # Use TDMA protocol instead of CSMA/CA
         self.mac_protocol = Stdma(self)
-        # self.mac_protocol = Fprp(self)'
+        # self.mac_protocol = Stdma_Test(self)
+        # self.mac_protocol = FPRP(self)
         # self.mac_protocol = DeepSeekStdma(self)
+        # self.mac_protocol = Tra_Tdma(self)
         self.mac_process_dict = dict()
         self.mac_process_finish = dict()
         self.mac_process_count = 0
         self.enable_blocking = 0 # enable "stop-and-wait" protocol
-
+        self.neighbor_table = None  # 新增邻居表属性
         self.routing_protocol = Opar(self.simulator, self)
-
+        self.routing_protocol = LastOpar(self.simulator, self)
+        # self.routing_protocol = NewOpar(self.simulator, self)
         self.mobility_model = RandomWalk3D(self)
         self.motion_controller = VfMotionController(self)
 
@@ -138,10 +196,18 @@ class Drone:
         self.sleep = False
 
         # self.env.process(self.generate_data_packet())
+        # 添加多路径支持的属性
+        self.path_queues = {}  # 每个目的地的多路径队列
+        self.max_paths_per_dest = 3  # 每个目的地的最大路径数
+        self.current_path_index = {}  # 当前使用的路径索引
+
+        # 修改队列结构
+        self.transmitting_queue = MultiPathQueue(self.max_queue_size)
 
         self.env.process(self.feed_packet())
-        # self.env.process(self.energy_monitor())
+        self.env.process(self.energy_monitor())
         self.env.process(self.receive())
+
 
     # def generate_data_packet(self, traffic_pattern='Poisson'):
     #     """
@@ -252,7 +318,27 @@ class Drone:
     #
     #             # 同一批次的包之间添加小延迟
     #             yield self.env.timeout(2000)  # 2ms间隔
+    def monitor_performance(self):
+        """监控网络性能指标"""
+        while True:
+            yield self.env.timeout(config.MONITOR_INTERVAL)
 
+            # 计算端到端延迟
+            delays = self.simulator.metrics.end_to_end_delay
+            avg_delay = sum(delays) / len(delays) if delays else 0
+
+            # 计算吞吐量
+            throughput = self.simulator.metrics.calculate_throughput()
+
+            # 计算数据包投递率
+            pdr = self.simulator.metrics.calculate_pdr()
+
+            # 记录性能指标
+            self.simulator.metrics.record_performance(
+                avg_delay=avg_delay,
+                throughput=throughput,
+                pdr=pdr
+            )
     def generate_data_packet(self, traffic_pattern='Poisson'):
         """
         Generate one data packet, it should be noted that only when the current packet has been sent can the next
@@ -309,6 +395,20 @@ class Drone:
                     pass
             else:  # cannot generate packets if "my_drone" is in sleep state
                 break
+
+    def energy_monitor(self):
+        """监控能量消耗"""
+        while True:
+            yield self.env.timeout(1 * 1e5)  # 每0.1秒更新一次
+
+            # 更新能量统计
+            self.simulator.metrics.update_energy_consumption(
+                self.identifier,
+                self.residual_energy
+            )
+
+            if self.residual_energy <= config.ENERGY_THRESHOLD:
+                self.sleep = True
     def blocking(self):
         """
         Simulate the head-of-line blocking problem, but without waiting for an ACK,
@@ -353,7 +453,13 @@ class Drone:
                         logging.info('UAV: %s has packets in the queue, start to process' % self.identifier)
                         logging.info('UAV: %s, queue size: %s' % (self.identifier, self.transmitting_queue.qsize()))
                         packet = self.transmitting_queue.get()  # get the packet at the head of the queue
-
+                        logging.info(f"Time {self.env.now}: Drone {self.identifier} got {type(packet).__name__}")
+                        if isinstance(packet, TrafficRequirement):
+                            logging.info(f"Time {self.env.now}: Drone {self.identifier} processing TrafficRequirement")
+                            packet.routing_path = self.routing_protocol.dijkstra(self.routing_protocol.calculate_cost_matrix(),packet.source_id, packet.dest_id, 0)
+                            if len(packet.routing_path) != 0:
+                                packet.routing_path.pop(0)
+                            logging.info(f"Time {self.env.now}: Drone {self.identifier} routing path: {packet.routing_path}")
                         if self.env.now < packet.creation_time + packet.deadline:  # this packet has not expired
                             if isinstance(packet, DataPacket):
                                 if packet.number_retransmission_attempt[self.identifier] < config.MAX_RETRANSMISSION_ATTEMPT:
@@ -377,11 +483,16 @@ class Drone:
 
                             else:  # control packet but not ack
                                 yield self.env.process(self.packet_coming(packet))
+                                logging.info(f'{type(packet).__name__}')
                         else:
                             pass  # means dropping this data packet for expiration
             else:  # this drone runs out of energy
                 break  # it is important to break the while loop
-
+    def get_neighbors(self):
+        """通过运动控制器获取邻居表"""
+        if hasattr(self, 'motion_controller'):
+            return self.motion_controller.neighbor_table.neighbor_table.keys()
+        return []
     def packet_coming(self, pkd):
         """
         When drone has a packet ready to transmit, yield it.
@@ -394,10 +505,10 @@ class Drone:
         """
 
         if not self.sleep:
+            logging.info(f"Time {self.env.now}: Drone {self.identifier} starting packet_coming for {type(pkd).__name__}")
             arrival_time = self.env.now
             logging.info('Packet: %s waiting for UAV: %s buffer resource at: %s',
                          pkd.packet_id, self.identifier, arrival_time)
-
             with self.buffer.request() as request:
                 yield request  # wait to enter to buffer
 
@@ -414,6 +525,7 @@ class Drone:
 
                 # every time the drone initiates a data packet transmission, "mac_process_count" will be increased by 1
                 self.mac_process_count += 1
+                logging.info(f'传输{type(pkd).__name__}')
                 key = 'mac_send' + str(self.identifier) + '_' + str(pkd.packet_id)
                 mac_process = self.env.process(self.mac_protocol.mac_send(pkd))
                 self.mac_process_dict[key] = mac_process
@@ -423,12 +535,12 @@ class Drone:
         else:
             pass
 
-    def energy_monitor(self):
-        while True:
-            yield self.env.timeout(1 * 1e5)  # report residual energy every 0.1s
-            if self.residual_energy <= config.ENERGY_THRESHOLD:
-                self.sleep = True
-                # print('UAV: ', self.identifier, ' run out of energy at: ', self.env.now)
+    # def energy_monitor(self):
+    #     while True:
+    #         yield self.env.timeout(1 * 1e5)  # report residual energy every 0.1s
+    #         if self.residual_energy <= config.ENERGY_THRESHOLD:
+    #             self.sleep = True
+    #             # print('UAV: ', self.identifier, ' run out of energy at: ', self.env.now)
 
     def remove_from_queue(self, data_pkd):
         """
@@ -447,14 +559,13 @@ class Drone:
             self.transmitting_queue.put(temp_queue.get())
 
     def receive(self):
-        """通用的接收函数"""
+        """在drone.py的receive函数中添加"""
         while True:
             if not self.sleep:
                 self.update_inbox()
                 flag, all_drones_send_to_me, time_span, potential_packet = self.trigger()
 
                 if flag:
-                    # 找出当前正在传输的节点
                     transmitting_node_list = []
                     for drone in self.simulator.drones:
                         for item in drone.inbox:
@@ -465,12 +576,8 @@ class Drone:
                                 transmitting_node_list.append(transmitter)
 
                     transmitting_node_list = list(set(transmitting_node_list))
-
-                    # 计算SINR
-                    # sinr_list = sinr_calculator(self, all_drones_send_to_me, transmitting_node_list)
-                    # sinr_list = tdma_sinr_calculator(self, all_drones_send_to_me)
                     sinr_list = stdma_sinr_calculator(self, all_drones_send_to_me, transmitting_node_list)
-
+                    # sinr_list = sinr_calculator(self, all_drones_send_to_me, transmitting_node_list)
                     if sinr_list:
                         max_sinr = max(sinr_list)
                         if max_sinr >= config.SNR_THRESHOLD:
@@ -479,13 +586,36 @@ class Drone:
 
                             if pkd.get_current_ttl() < config.MAX_TTL:
                                 sender = all_drones_send_to_me[which_one]
-                                logging.info(
-                                    f'Packet {pkd.packet_id} from UAV: {sender} received by UAV: {self.identifier} at {self.simulator.env.now}, SNR: {max_sinr}')
-                                self.routing_protocol.packet_reception(pkd, sender)
+
+                                # 添加对控制包的处理
+                                if hasattr(pkd, 'msg_type'):  # 如果是控制包
+                                    pass
+                                    # self.mac_protocol.handle_control_packet(pkd, sender)
+                                else:  # 数据包正常处理
+                                    logging.info(
+                                        f'Packet {pkd.packet_id} from UAV: {sender} received by UAV: {self.identifier}')
+                                    self.routing_protocol.packet_reception(pkd, sender)
                             else:
                                 logging.info(f'Packet {pkd.packet_id} dropped due to exceeding max TTL')
                         else:
                             self.simulator.metrics.collision_num += len(sinr_list)
+                            # 打印每个被干扰的数据包信息
+                            for i, (sinr, packet) in enumerate(zip(sinr_list, potential_packet)):
+                                sender = all_drones_send_to_me[i]
+                                logging.warning(
+                                    f'干扰丢包: Packet {packet.packet_id} from UAV: {sender} to UAV: {self.identifier}, '
+                                    f'SINR: {sinr:.2f}dB < Threshold({config.SNR_THRESHOLD}dB), '
+                                    f'同时传输节点: {transmitting_node_list}'
+                                )
+
+                                # 如果是数据包，记录更多信息
+                                if isinstance(packet, DataPacket):
+                                    logging.warning(
+                                        f'干扰包详情: src={packet.src_drone.identifier}, '
+                                        f'dst={packet.dst_drone.identifier}, '
+                                        f'next_hop={packet.next_hop_id if hasattr(packet, "next_hop_id") else "None"}, '
+                                        f'路径={packet.routing_path if hasattr(packet, "routing_path") else "None"}'
+                                    )
 
                 yield self.env.timeout(5)
             else:

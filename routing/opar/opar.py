@@ -7,7 +7,7 @@ from topology.virtual_force.vf_packet import VfPacket
 from utils import config
 from utils.util_function import euclidean_distance
 from phy.large_scale_fading import maximum_communication_range
-
+from simulator.TrafficGenerator import TrafficRequirement
 
 # config logging
 logging.basicConfig(filename='running_log.log',
@@ -56,17 +56,40 @@ class Opar:
         self.simulator.env.process(self.check_waiting_list())
 
     def calculate_cost_matrix(self):
-        cost = np.zeros((self.simulator.n_drones, self.simulator.n_drones))
-        cost.fill(np.inf)
+        """优化的成本矩阵计算，结合多个因素"""
+        n_drones = self.simulator.n_drones
+        cost = np.full((n_drones, n_drones), np.inf)
 
-        for i in range(self.simulator.n_drones):
-            for j in range((i+1), self.simulator.n_drones):
+        for i in range(n_drones):
+            for j in range(i + 1, n_drones):
                 drone1 = self.simulator.drones[i]
                 drone2 = self.simulator.drones[j]
 
-                if (i != j) and (euclidean_distance(drone1.coords, drone2.coords) < self.max_comm_range):
-                    cost[i, j] = 1
-                    cost[j, i] = 1
+                distance = euclidean_distance(drone1.coords, drone2.coords)
+
+                if distance < self.max_comm_range:
+                    # 基础距离成本
+                    distance_cost = distance / self.max_comm_range
+
+                    # 队列负载成本
+                    queue_cost = drone2.transmitting_queue.qsize() / drone2.max_queue_size
+
+                    # 链路稳定性成本
+                    lifetime = link_lifetime_predictor(drone1, drone2, self.max_comm_range)
+                    stability_cost = 1.0 / (1.0 + lifetime)
+
+                    # 能量成本
+                    energy_cost = 1.0 - (drone2.residual_energy / config.INITIAL_ENERGY)
+
+                    # 综合评估
+                    total_cost = (
+                            0.3 * distance_cost +
+                            0.2 * queue_cost +
+                            0.3 * stability_cost +
+                            0.2 * energy_cost
+                    )
+
+                    cost[i, j] = cost[j, i] = total_cost
 
         return cost
 
@@ -204,10 +227,10 @@ class Opar:
             self.best_path.pop(0)  # remove myself
             packet.routing_path = self.best_path
             best_next_hop_id = self.best_path[0]
-
+            logging.info('my_drone: %s routing Path: %s', self.my_drone.identifier, packet.routing_path)
         else:  # for relay nodes, no additional calculations are required
             routing_path = packet.routing_path
-
+            #业务路径
             if len(routing_path) > 1:
                 routing_path.pop(0)
                 packet.routing_path = routing_path
@@ -231,8 +254,8 @@ class Opar:
         :return: None
         """
         current_time = self.simulator.env.now
-        logging.info('~~~ Packet: %s is received by UAV: %s at time: %s',
-                     packet.packet_id, self.my_drone.identifier, current_time)
+        # logging.info('~~~ Packet: %s is received by UAV: %s at time: %s',
+        #              packet.packet_id, self.my_drone.identifier, current_time)
 
         if isinstance(packet, DataPacket):
             packet_copy = copy.copy(packet)
@@ -276,6 +299,7 @@ class Opar:
                                       simulator=self.simulator)
                 ack_packet.msg_type = 'ack'
                 self.my_drone.transmitting_queue.put(ack_packet)
+
 
     def check_waiting_list(self):
         while True:

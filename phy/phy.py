@@ -42,7 +42,7 @@ class Phy:
         # Log the packet sending event
         logging.info(
             f"UAV: {self.my_drone.identifier} sending unicast packet {packet.packet_id} to UAV {next_hop_id} at time {self.env.now}")
-        energy_consumption = (packet.packet_length / config.BIT_RATE) * config.TRANSMITTING_POWER
+        energy_consumption = (1000000*packet.packet_length / config.BIT_RATE) * config.TRANSMITTING_POWER
         self.my_drone.residual_energy -= energy_consumption
         logging.info(
             f"UAV: {self.my_drone.identifier} energy consumption for unicast: {energy_consumption:.3f} J, remaining energy: {self.my_drone.residual_energy:.3f} J")

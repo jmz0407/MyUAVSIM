@@ -74,14 +74,20 @@ class DataPacket(Packet):
 
         self.src_drone = src_drone
         self.dst_drone = dst_drone
-        self.routing_path = None
-        self.next_hop_id = None
+        self.routing_paths = []  # 存储多条路径
+        self.current_path_index = 0  # 当前使用的路径索引
+        self.next_hop_ids = []  # 存储多个下一跳节点
         self.priority = priority  # 0: 普通流量, 1: 高优先级流量
 
         # 流相关属性
         self.flow_id = f"{'hp_' if priority > 0 else ''}flow_{src_drone.identifier}_{dst_drone.identifier}"
         self.retries = 0  # 重传次数
         self.max_retries = 2 if priority > 0 else 1  # 高优先级数据包有更多重传机会
+
+        # 多径传输相关属性
+        self.is_multipath = False  # 是否使用多径传输
+        self.path_selection_strategy = 'parallel'  # 'parallel' 或 'backup'
+        self.successful_paths = set()  # 记录成功传输的路径
 
 
 class AckPacket(Packet):

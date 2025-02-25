@@ -52,6 +52,7 @@ class VfMotionController:
         self.max_z = config.MAP_HEIGHT
 
         self.neighbor_table = VfNeighborTable(drone.simulator.env, drone)
+        self.my_drone.neighbor_table = VfNeighborTable(drone.simulator.env, drone)
         self.position_update_interval = 1 * 1e5
         self.max_step = 20
         self.pause_time = 1 * 1e6
