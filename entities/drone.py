@@ -5,12 +5,19 @@ import random
 import math
 import queue
 from entities.packet import DataPacket
+from routing.mp_olsr.olsr import OlsrHelloPacket,OlsrTcPacket
+from routing.mp_olsr.direct_olsr import DirectOlsr
 from routing.dsdv.dsdv import Dsdv
 from routing.gpsr.gpsr import Gpsr
 from routing.grad.grad import Grad
 from routing.opar.opar import Opar
+from routing.multipath.amlb_opar import AMLB_OPAR
+from routing.multipath.mp_amlb_opar import MP_AMLB_OPAR
+from routing.mp_dsr.mp_dsr import MPDSR
 from routing.opar.new_opar import NewOpar
+from routing.mp_olsr.mp_olsr import MP_OLSR
 from routing.q_routing.q_routing import QRouting
+from routing.mp_olsr.olsr import Olsr
 from mac.csma_ca import CsmaCa
 from mac.reuse_slot_tdma import Tdma
 # from mac.self_tdma import Stdma
@@ -185,10 +192,19 @@ class Drone:
         self.mac_process_count = 0
         self.enable_blocking = 0 # enable "stop-and-wait" protocol
         self.neighbor_table = None  # 新增邻居表属性
-        self.routing_protocol = Opar(self.simulator, self)
+
+
+        # self.routing_protocol = Opar(self.simulator, self)
         self.routing_protocol = LastOpar(self.simulator, self)
+        # self.routing_protocol = AMLB_OPAR(self.simulator, self)
+        # self.routing_protocol = MP_AMLB_OPAR(self.simulator, self)
         # self.routing_protocol = NewOpar(self.simulator, self)
+        # self.routing_protocol = MPDSR(self.simulator, self)
+        # self.routing_protocol = MP_OLSR(self.simulator, self)
+        # self.routing_protocol = Olsr(self.simulator, self)
+        # self.routing_protocol = DirectOlsr(self.simulator, self)
         self.mobility_model = RandomWalk3D(self)
+        self.mobility_model = GaussMarkov3D(self)
         self.motion_controller = VfMotionController(self)
 
         self.energy_model = EnergyModel()
@@ -456,7 +472,30 @@ class Drone:
                         logging.info(f"Time {self.env.now}: Drone {self.identifier} got {type(packet).__name__}")
                         if isinstance(packet, TrafficRequirement):
                             logging.info(f"Time {self.env.now}: Drone {self.identifier} processing TrafficRequirement")
-                            packet.routing_path = self.routing_protocol.dijkstra(self.routing_protocol.calculate_cost_matrix(),packet.source_id, packet.dest_id, 0)
+                            try:
+                                # 尝试使用compute_path方法
+                                packet.routing_path = self.routing_protocol.compute_path(
+                                    packet.source_id,
+                                    packet.dest_id,
+                                    0  # 选项参数
+                                )
+                            except AttributeError:
+                                # 如果路由协议没有compute_path方法，尝试使用dijkstra
+                                logging.warning(
+                                    f"路由协议 {type(self.routing_protocol).__name__} 不支持compute_path方法，使用dijkstra")
+                                try:
+                                    packet.routing_path = self.routing_protocol.dijkstra(
+                                        self.routing_protocol.calculate_cost_matrix(),
+                                        packet.source_id,
+                                        packet.dest_id,
+                                        0
+                                    )
+                                except Exception as e:
+                                    logging.error(f"计算路由路径失败: {str(e)}")
+                                    packet.routing_path = []  # 设置为空路径
+
+                            logging.info(
+                                f"Time {self.env.now}: Drone {self.identifier} routing path: {packet.routing_path}")
                             if len(packet.routing_path) != 0:
                                 packet.routing_path.pop(0)
                             logging.info(f"Time {self.env.now}: Drone {self.identifier} routing path: {packet.routing_path}")
@@ -559,63 +598,87 @@ class Drone:
             self.transmitting_queue.put(temp_queue.get())
 
     def receive(self):
-        """在drone.py的receive函数中添加"""
+        """确保所有控制包不受SINR影响，只有数据包受SINR影响"""
         while True:
             if not self.sleep:
                 self.update_inbox()
                 flag, all_drones_send_to_me, time_span, potential_packet = self.trigger()
 
                 if flag:
-                    transmitting_node_list = []
-                    for drone in self.simulator.drones:
-                        for item in drone.inbox:
-                            packet = item[0]
-                            insertion_time = item[1]
-                            transmitter = item[2]
-                            if transmitter in all_drones_send_to_me:
-                                transmitting_node_list.append(transmitter)
+                    # 用于存储数据包的发送者和包
+                    data_packet_senders = []
+                    data_packets = []
 
-                    transmitting_node_list = list(set(transmitting_node_list))
-                    sinr_list = stdma_sinr_calculator(self, all_drones_send_to_me, transmitting_node_list)
-                    # sinr_list = sinr_calculator(self, all_drones_send_to_me, transmitting_node_list)
-                    if sinr_list:
-                        max_sinr = max(sinr_list)
-                        if max_sinr >= config.SNR_THRESHOLD:
-                            which_one = sinr_list.index(max_sinr)
-                            pkd = potential_packet[which_one]
+                    # 先处理所有控制包，不受SINR影响
+                    for i, (sender, packet) in enumerate(zip(all_drones_send_to_me, potential_packet)):
+                        # 检查是否是控制包（OLSR控制包或具有msg_type属性的包）
+                        is_control_packet = (isinstance(packet, OlsrHelloPacket) or
+                                             isinstance(packet, OlsrTcPacket) or
+                                             hasattr(packet, 'msg_type'))
 
-                            if pkd.get_current_ttl() < config.MAX_TTL:
-                                sender = all_drones_send_to_me[which_one]
-
-                                # 添加对控制包的处理
-                                if hasattr(pkd, 'msg_type'):  # 如果是控制包
-                                    pass
-                                    # self.mac_protocol.handle_control_packet(pkd, sender)
-                                else:  # 数据包正常处理
-                                    logging.info(
-                                        f'Packet {pkd.packet_id} from UAV: {sender} received by UAV: {self.identifier}')
-                                    self.routing_protocol.packet_reception(pkd, sender)
+                        if is_control_packet:
+                            if packet.get_current_ttl() < config.MAX_TTL:
+                                # 直接处理控制包，不受SINR影响
+                                if isinstance(packet, OlsrHelloPacket) or isinstance(packet, OlsrTcPacket):
+                                    # logging.info('OLSR控制消息 %s 从UAV: %s 接收到 UAV: %s (不受SINR影响)',
+                                    #              packet.packet_id, sender, self.identifier)
+                                    self.routing_protocol.packet_reception(packet, sender)
+                                elif hasattr(packet, 'msg_type'):
+                                    # logging.info('控制消息 %s (类型: %s) 从UAV: %s 接收到 UAV: %s (不受SINR影响)',
+                                    #              packet.packet_id, packet.msg_type, sender, self.identifier)
+                                    # 如果有其他控制包处理逻辑，可以在这里添加
+                                    # 例如：self.mac_protocol.handle_control_packet(packet, sender)
+                                    self.routing_protocol.packet_reception(packet, sender)
                             else:
-                                logging.info(f'Packet {pkd.packet_id} dropped due to exceeding max TTL')
+                                logging.info(f'控制包 {packet.packet_id} 因超过最大TTL而丢弃')
                         else:
-                            self.simulator.metrics.collision_num += len(sinr_list)
-                            # 打印每个被干扰的数据包信息
-                            for i, (sinr, packet) in enumerate(zip(sinr_list, potential_packet)):
-                                sender = all_drones_send_to_me[i]
-                                logging.warning(
-                                    f'干扰丢包: Packet {packet.packet_id} from UAV: {sender} to UAV: {self.identifier}, '
-                                    f'SINR: {sinr:.2f}dB < Threshold({config.SNR_THRESHOLD}dB), '
-                                    f'同时传输节点: {transmitting_node_list}'
-                                )
+                            # 收集数据包，稍后进行SINR检查
+                            data_packet_senders.append(sender)
+                            data_packets.append(packet)
 
-                                # 如果是数据包，记录更多信息
-                                if isinstance(packet, DataPacket):
+                    # 如果有数据包，进行SINR检查
+                    if data_packets:
+                        # 获取数据包发送者列表
+                        transmitting_node_list = list(set(data_packet_senders))
+
+                        # 计算SINR
+                        sinr_list = stdma_sinr_calculator(self, data_packet_senders, transmitting_node_list)
+
+                        if sinr_list:
+                            max_sinr = max(sinr_list)
+                            if max_sinr >= config.SNR_THRESHOLD:
+                                # 找到SINR最高的数据包
+                                which_one = sinr_list.index(max_sinr)
+                                pkd = data_packets[which_one]
+                                sender = data_packet_senders[which_one]
+
+                                if pkd.get_current_ttl() < config.MAX_TTL:
+                                    # 处理数据包
+                                    logging.info(
+                                        f'数据包 {pkd.packet_id} 从UAV: {sender} 接收到 UAV: {self.identifier}')
+                                    self.routing_protocol.packet_reception(pkd, sender)
+                                else:
+                                    logging.info(f'数据包 {pkd.packet_id} 因超过最大TTL而丢弃')
+                            else:
+                                # 记录碰撞
+                                self.simulator.metrics.collision_num += len(sinr_list)
+
+                                # 打印丢包信息
+                                for i, (sinr, packet) in enumerate(zip(sinr_list, data_packets)):
+                                    sender = data_packet_senders[i]
                                     logging.warning(
-                                        f'干扰包详情: src={packet.src_drone.identifier}, '
-                                        f'dst={packet.dst_drone.identifier}, '
-                                        f'next_hop={packet.next_hop_id if hasattr(packet, "next_hop_id") else "None"}, '
-                                        f'路径={packet.routing_path if hasattr(packet, "routing_path") else "None"}'
+                                        f'干扰丢包: 数据包 {packet.packet_id} 从UAV: {sender} 到 UAV: {self.identifier}, '
+                                        f'SINR: {sinr:.2f}dB < 阈值({config.SNR_THRESHOLD}dB), '
+                                        f'同时传输节点: {transmitting_node_list}'
                                     )
+
+                                    if isinstance(packet, DataPacket):
+                                        logging.warning(
+                                            f'干扰包详情: 源={packet.src_drone.identifier}, '
+                                            f'目的={packet.dst_drone.identifier}, '
+                                            f'下一跳={packet.next_hop_id if hasattr(packet, "next_hop_id") else "None"}, '
+                                            f'路径={packet.routing_path if hasattr(packet, "routing_path") else "None"}'
+                                        )
 
                 yield self.env.timeout(5)
             else:

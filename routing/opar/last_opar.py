@@ -339,6 +339,7 @@ class LastOpar:
             if packet_copy.dst_drone.identifier == self.my_drone.identifier:
                 # 目标节点处理
                 latency = current_time - packet_copy.creation_time
+                hop_count = packet_copy.get_current_ttl()
                 self.simulator.metrics.deliver_time_dict[packet_copy.packet_id] = latency
                 self.simulator.metrics.throughput_dict[packet_copy.packet_id] = (
                         config.DATA_PACKET_LENGTH / (latency / 1e6)
@@ -346,6 +347,12 @@ class LastOpar:
                 self.simulator.metrics.hop_cnt_dict[packet_copy.packet_id] = (
                     packet_copy.get_current_ttl()
                 )
+                self.simulator.metrics.record_packet_reception(
+                    packet_copy.packet_id, latency, hop_count)
+
+                logging.info('Packet %s delivered, latency: %s us, throughput: %s',
+                             packet_copy.packet_id, latency,
+                             self.simulator.metrics.throughput_dict[packet_copy.packet_id])
                 self.simulator.metrics.datapacket_arrived.add(packet_copy.packet_id)
 
                 logging.info('Packet %s delivered, latency: %s us, throughput: %s',

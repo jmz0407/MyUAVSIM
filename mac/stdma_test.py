@@ -133,8 +133,8 @@ class Stdma_Test:
 
                     # 创建RL环境
                     from mac.rl_controller.rl_environment import StdmaEnv
-                    from mac.rl_controller.rl_controller import StdmaFeatureExtractor  # 引入特征提取器
-                    feature_extractor = StdmaFeatureExtractor(observation_space=None, features_dim=256, num_nodes = self.num_nodes)  # 设置特征维度
+                    from mac.rl_controller.DQN_rl_controller import StdmaFeatureExtractor  # 引入特征提取器
+                    feature_extractor = StdmaFeatureExtractor(observation_space=None, features_dim=256,)  # 设置特征维度
                     rl_env = StdmaEnv(
                         simulator=self.simulator,
                         num_nodes=self.my_drone.simulator.n_drones,

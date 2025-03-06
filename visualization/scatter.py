@@ -7,6 +7,7 @@ from phy.large_scale_fading import maximum_communication_range
 
 
 def scatter_plot(simulator):
+    plt.clf()  # 清理当前画布，避免重叠
     fig = plt.figure(figsize=(12, 8))  # 调整画布尺寸
     ax = fig.add_subplot(111, projection='3d')
     drawn_pairs = set()
@@ -53,4 +54,4 @@ def scatter_plot(simulator):
     # 保存图片并显示
     plt.tight_layout()
     plt.savefig('uav_topology_clear.png', dpi=300)  # 保存高分辨率图片
-    plt.show()
+    plt.show()  # 确保只调用一次plt.show()

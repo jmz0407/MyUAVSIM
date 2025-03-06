@@ -14,6 +14,7 @@ import traceback
 import copy
 from simulator.TrafficGenerator import TrafficRequirement
 from routing.opar.last_opar import LastOpar
+from routing.multipath.amlb_opar import AMLB_OPAR
 class StdmaEnv(gym.Env):
     def __init__(self, simulator, num_nodes=10, num_slots=10):
         super().__init__()
@@ -318,7 +319,7 @@ class StdmaEnv(gym.Env):
         else:
             self.current_node = None
 
-        # print(
+        # print(f
         #     f"新业务需求: 源节点 {self.current_requirement.source_id} -> 目标节点 {self.current_requirement.dest_id}, 业务路径{self.current_requirement.routing_path}")
         obs = self._get_observation()
         # print(f"环境已重置，初始节点: {self.current_node}")  # 调试信息
@@ -549,7 +550,7 @@ class StdmaEnv(gym.Env):
             for existing_node in self.current_schedule[action]:
                 # 如果现有节点是两跳内的邻居，不允许复用
                 if existing_node in two_hop_neighbors:
-                    print(f"节点 {node} 不能与两跳内的节点 {existing_node} 复用时隙 {action}")
+                    # print(f"节点 {node} 不能与两跳内的节点 {existing_node} 复用时隙 {action}")
                     return False
                 # print(f"节点 {node} 可以与节点 {existing_node} 复用时隙 {action}")
             return True  # 可以复用
@@ -563,7 +564,7 @@ class StdmaEnv(gym.Env):
                             can_reuse = False
                             break
                     if can_reuse:
-                        print(f"节点 {node} 应该复用时隙 {slot} 而不是新建时隙 {action}")
+                        # print(f"节点 {node} 应该复用时隙 {slot} 而不是新建时隙 {action}")
                         return False
             return True  # 如果没有找到可复用的时隙，允许创建新时隙
 
@@ -1023,8 +1024,8 @@ class StdmaEnv(gym.Env):
 
             # 创建OPAR实例
             src_drone = self.simulator.drones[src_id]
-            opar = LastOpar(self.simulator, src_drone)
-
+            # opar = LastOpar(self.simulator, src_drone)
+            opar = AMLB_OPAR(self.simulator, src_drone)
             # 计算代价矩阵
             cost_matrix = opar.calculate_cost_matrix()
 
@@ -1033,10 +1034,12 @@ class StdmaEnv(gym.Env):
             temp_cost = cost_matrix.copy()
 
             # 寻找k条路径
-            for k in range(2):  # 找3条不同路径
+            for k in range(3):  # 找3条不同路径
                 path = opar.dijkstra(temp_cost, src_id, dst_id, 0)
                 if not path:
                     break
+                if len(path) != 0:
+                    path.pop(0)
 
                 k_paths.append(path)
 

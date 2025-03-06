@@ -203,7 +203,7 @@ class TrafficGenerator:
             if burst < pattern['num_bursts'] - 1:
                 yield self.env.timeout(pattern['burst_interval'])
 
-    def generate_traffic(self, source_id, dest_id, num_packets, packet_interval=1000):
+    def generate_traffic(self, source_id, dest_id, num_packets, packet_interval=2000):
         source_drone = self.simulator.drones[source_id]
         dest_drone = self.simulator.drones[dest_id]
 

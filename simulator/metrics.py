@@ -4,6 +4,9 @@ from collections import defaultdict
 from utils import config
 import matplotlib.pyplot as plt
 import numpy as np
+from simulator.TemporalMetrics import TemporalMetrics
+plt.rcParams['font.sans-serif']=['STFangsong'] #用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False #用来正常显示负号
 class Metrics:
     """
     Tools for statistics of network performance
@@ -58,7 +61,12 @@ class Metrics:
         self.energy_history = defaultdict(list)  # 记录能量消耗历史
         self.energy_timestamps = defaultdict(list)  # 记录对应的时间戳
         # 初始化每个无人机的能量监控
+        # 添加时间序列指标收集器
+        self.temporal_metrics = TemporalMetrics(simulator, self)
 
+        # 启动性能监控进程
+        if simulator and hasattr(simulator, 'env'):
+            self.simulator.env.process(self.periodic_metrics_record())
         self.collision_num = 0
 
     def update_energy_consumption(self, drone_id, current_energy):
@@ -276,6 +284,41 @@ class Metrics:
             throughput += value
         return throughput
 
+    def periodic_metrics_record(self):
+        """定期记录指标，用于绘制时间序列图"""
+        # 每0.5秒记录一次指标
+        while True:
+            yield self.simulator.env.timeout(0.5 * 1e6)
+            self.temporal_metrics.snapshot()
+
+    def record_packet_reception(self, packet_id, latency, hop_count):
+        """记录数据包接收信息，支持时间序列分析"""
+        self.datapacket_arrived.add(packet_id)
+        self.deliver_time_dict[packet_id] = latency
+        self.hop_cnt_dict[packet_id] = hop_count
+
+        # 更新时间序列指标
+        self.temporal_metrics.snapshot()
+
+    def record_multipath_metrics(self, flow_id, path_id, delay, success=True):
+        """记录多路径传输指标"""
+        if not hasattr(self, 'multipath_metrics'):
+            self.multipath_metrics = {
+                'path_usage': defaultdict(lambda: defaultdict(int)),
+                'path_delays': defaultdict(lambda: defaultdict(list)),
+                'path_success': defaultdict(lambda: defaultdict(int)),
+            }
+
+        # 记录路径使用次数
+        self.multipath_metrics['path_usage'][flow_id][path_id] += 1
+
+        # 记录延迟
+        self.multipath_metrics['path_delays'][flow_id][path_id].append(delay)
+
+        # 记录成功或失败
+        if success:
+            self.multipath_metrics['path_success'][flow_id][path_id] += 1
+
     def plot_energy_metrics(self):
         """绘制能量消耗相关的图表"""
         plt.figure(figsize=(15, 10))
@@ -312,6 +355,9 @@ class Metrics:
         plt.tight_layout()
         plt.show()
 
+        # 使用时间序列能量图
+        self.temporal_metrics.plot_energy_over_time()
+
     def plot_all_metrics(self):
         """
         一次性绘制所有网络性能指标（吞吐量、端到端时延、跳数、MAC延迟）的折线图
@@ -327,57 +373,71 @@ class Metrics:
         # 获取最小的数组长度，以确保x和y的维度一致
         min_length = min(len(e2e_delay_array), len(throughput_array), len(hop_count_array), len(mac_delay_array))
 
-        # 截取数据到最小长度
-        e2e_delay_array = e2e_delay_array[:min_length]
-        throughput_array = throughput_array[:min_length]
-        hop_count_array = hop_count_array[:min_length]
-        mac_delay_array = mac_delay_array[:min_length]
+        if min_length > 0:
+            # 截取数据到最小长度
+            e2e_delay_array = e2e_delay_array[:min_length]
+            throughput_array = throughput_array[:min_length]
+            hop_count_array = hop_count_array[:min_length]
+            mac_delay_array = mac_delay_array[:min_length]
 
-        # 创建时间轴：假设每个仿真步骤代表 1 秒
-        # 使用仿真环境的时间（如果有的话），否则简单使用步长索引
-        time_steps = np.arange(min_length)  # 使用最小长度作为时间步的长度
+            # 创建时间轴：假设每个仿真步骤代表 1 秒
+            # 使用仿真环境的时间（如果有的话），否则简单使用步长索引
+            time_steps = np.arange(min_length)  # 使用最小长度作为时间步的长度
 
-        # 如果你有环境时间（如 self.env.now），可以替换这行代码
-        # time_steps = self.env.now + np.arange(min_length)
+            # 如果你有环境时间（如 self.env.now），可以替换这行代码
+            # time_steps = self.env.now + np.arange(min_length)
 
-        # 创建图形窗口并设置大小
-        fig, axs = plt.subplots(2, 2, figsize=(12, 10))  # 2行2列，4个子图
+            # 创建图形窗口并设置大小
+            fig, axs = plt.subplots(2, 2, figsize=(12, 10))  # 2行2列，4个子图
 
-        # --- 1) 端到端时延折线图 ---
-        axs[0, 0].plot(time_steps, e2e_delay_array, marker='o', color='b', label='End-to-End Delay')
-        axs[0, 0].set_title('End-to-End Delay over Time')
-        axs[0, 0].set_xlabel('Time (s)')  # 横轴是时间（秒）
-        axs[0, 0].set_ylabel('Delay (ms)')
-        axs[0, 0].grid(True)
-        axs[0, 0].legend()
+            # --- 1) 端到端时延折线图 ---
+            axs[0, 0].plot(time_steps, e2e_delay_array, marker='o', color='b', label='End-to-End Delay')
+            axs[0, 0].set_title('End-to-End Delay over Time')
+            axs[0, 0].set_xlabel('Time (s)')  # 横轴是时间（秒）
+            axs[0, 0].set_ylabel('Delay (ms)')
+            axs[0, 0].grid(True)
+            axs[0, 0].legend()
 
-        # --- 2) 吞吐量折线图 ---
-        axs[0, 1].plot(time_steps, throughput_array, marker='x', color='g', label='Throughput')
-        axs[0, 1].set_title('Throughput over Time')
-        axs[0, 1].set_xlabel('Time (s)')  # 横轴是时间（秒）
-        axs[0, 1].set_ylabel('Throughput (bps)')
-        axs[0, 1].grid(True)
-        axs[0, 1].legend()
+            # --- 2) 吞吐量折线图 ---
+            axs[0, 1].plot(time_steps, throughput_array, marker='x', color='g', label='Throughput')
+            axs[0, 1].set_title('Throughput over Time')
+            axs[0, 1].set_xlabel('Time (s)')  # 横轴是时间（秒）
+            axs[0, 1].set_ylabel('Throughput (bps)')
+            axs[0, 1].grid(True)
+            axs[0, 1].legend()
 
-        # --- 3) 跳数（Hop Count）折线图 ---
-        axs[1, 0].plot(time_steps, hop_count_array, marker='s', color='r', label='Hop Count')
-        axs[1, 0].set_title('Hop Count over Time')
-        axs[1, 0].set_xlabel('Time (s)')  # 横轴是时间（秒）
-        axs[1, 0].set_ylabel('Hop Count')
-        axs[1, 0].grid(True)
-        axs[1, 0].legend()
+            # --- 3) 跳数（Hop Count）折线图 ---
+            axs[1, 0].plot(time_steps, hop_count_array, marker='s', color='r', label='Hop Count')
+            axs[1, 0].set_title('Hop Count over Time')
+            axs[1, 0].set_xlabel('Time (s)')  # 横轴是时间（秒）
+            axs[1, 0].set_ylabel('Hop Count')
+            axs[1, 0].grid(True)
+            axs[1, 0].legend()
 
-        # --- 4) MAC 延迟折线图 ---
-        axs[1, 1].plot(time_steps, mac_delay_array, marker='^', color='m', label='MAC Delay')
-        axs[1, 1].set_title('MAC Delay over Time')
-        axs[1, 1].set_xlabel('Time (s)')  # 横轴是时间（秒）
-        axs[1, 1].set_ylabel('Delay (us)')
-        axs[1, 1].grid(True)
-        axs[1, 1].legend()
+            # --- 4) MAC 延迟折线图 ---
+            axs[1, 1].plot(time_steps, mac_delay_array, marker='^', color='m', label='MAC Delay')
+            axs[1, 1].set_title('MAC Delay over Time')
+            axs[1, 1].set_xlabel('Time (s)')  # 横轴是时间（秒）
+            axs[1, 1].set_ylabel('Delay (us)')
+            axs[1, 1].grid(True)
+            axs[1, 1].legend()
 
-        # 调整布局以避免子图重叠
-        plt.tight_layout()
-        plt.show()
+            # 调整布局以避免子图重叠
+            plt.tight_layout()
+            plt.show()
 
+        # 使用时间序列指标绘制更丰富的图表
+        self.temporal_metrics.plot_all_metrics()
+        plt.savefig('all_metrics_over_time.png', dpi=300, bbox_inches='tight')
+        plt.close()  # 关闭图形以释放内存
+
+    def plot_metric_over_time(self, metric_name):
+        """
+        绘制单个指标随时间变化的详细图表
+
+        Args:
+            metric_name: 指标名称，例如 'pdr', 'delay', 'throughput', 等
+        """
+        self.temporal_metrics.plot_metric_comparison(metric_name)
 
 

@@ -115,6 +115,17 @@ MONITOR_INTERVAL = 1000000  # 1s
 MULTIPATH_ENABLED = True
 MAX_PATHS = 3  # 最大路径数
 PATH_SELECTION_STRATEGY = 'parallel'  # 'parallel' 或 'backup'
-
+# 添加路由协议选择
+ROUTING_PROTOCOL = 'MP-DSR'  # 可选: 'DSDV', 'GPSR', 'OPAR', 'MP-DSR', 'AMLB-UAV'等
+HELLO_PACKET_LIFETIME = 1e6
 # 例如，DSDV 更新间隔设置为 1e6 时间单位（具体单位根据您的仿真环境确定）
 DSDV_UPDATE_INTERVAL = 1e6
+
+# utils/config.py (添加)
+
+# 多路径路由配置
+MULTIPATH_ENABLED = True
+MAX_PATHS = 3  # 最大路径数
+PATH_SELECTION_STRATEGY = 'round_robin'  # 'weighted', 'round_robin', 'adaptive'
+
+

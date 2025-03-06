@@ -781,6 +781,7 @@ def visualize_attention_weights(model, env):
 
             # 创建图并添加边注意力权重
             import networkx as nx
+            import matplotlib.pyplot as plt
 
             G = nx.Graph()
 
@@ -803,11 +804,16 @@ def visualize_attention_weights(model, env):
                     extra_weights = np.random.rand(len(edge_list) - len(attention_weights), attention_weights.shape[1])
                     attention_weights = np.vstack([attention_weights, extra_weights])
 
+            # 用于存储边标签的字典
+            edge_labels = {}
+
             for i, (src, dst) in enumerate(edge_list):
                 if src != dst:  # 忽略自环
                     # 获取第一个注意力头的权重
                     weight = attention_weights[i, 0] if len(attention_weights.shape) > 1 else attention_weights[i]
                     G.add_edge(src, dst, weight=weight)
+                    # 存储边标签，保留2位小数
+                    edge_labels[(src, dst)] = f"{weight:.2f}"
 
             # 获取节点位置
             pos = nx.get_node_attributes(G, 'pos')
@@ -838,6 +844,9 @@ def visualize_attention_weights(model, env):
             # 添加节点标签
             nx.draw_networkx_labels(G, pos, font_size=10)
 
+            # 添加边权重标签
+            nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+
             plt.title('GAT Attention Weights Visualization')  # 使用英文避免中文字体问题
             plt.axis('off')  # 关闭坐标轴
             plt.savefig('./gat_attention_weights.png')
@@ -850,6 +859,130 @@ def visualize_attention_weights(model, env):
             import traceback
             traceback.print_exc()
             return None
+# def visualize_attention_weights(model, env):
+#     # 获取观察空间样本
+#     obs = env.reset()[0]
+#
+#     # 提取特征
+#     device = next(model.policy.features_extractor.parameters()).device
+#     obs_tensor = torch.tensor(obs, dtype=torch.float32).to(device)
+#
+#     # 关键修改：确保输入是2D张量
+#     if len(obs_tensor.shape) == 1:
+#         obs_tensor = obs_tensor.unsqueeze(0)  # 添加批次维度
+#
+#     # 获取GAT层的注意力权重
+#     with torch.no_grad():
+#         try:
+#             obs_dict = model.policy.features_extractor._unflatten_observation(obs_tensor)
+#
+#             batch_index = 0
+#             topology = obs_dict['topology'][batch_index]
+#             positions = obs_dict['position'][batch_index]
+#             degrees = obs_dict['node_degrees'][batch_index]
+#
+#             # 构建节点特征
+#             node_features = torch.cat([
+#                 positions,
+#                 degrees.unsqueeze(-1)
+#             ], dim=-1)
+#             node_features = model.policy.features_extractor.node_encoder(node_features)
+#
+#             # 获取边索引
+#             edge_index = torch.nonzero(topology).t().contiguous()
+#             if edge_index.shape[1] == 0:  # 防止没有边的情况
+#                 edge_index = torch.tensor([[j, j] for j in range(len(positions))],
+#                                           dtype=torch.long).t().contiguous().to(device)
+#
+#             # 获取注意力权重
+#             attention_weights = model.policy.features_extractor.gat_block.get_attention_weights()
+#
+#             # 如果注意力权重为None，可能是因为尚未通过网络传递数据
+#             if attention_weights is None:
+#                 # 先运行一次GAT，获取注意力权重
+#                 _ = model.policy.features_extractor.gat_block(node_features, edge_index)
+#                 attention_weights = model.policy.features_extractor.gat_block.get_attention_weights()
+#
+#             if attention_weights is None:
+#                 print("警告: 无法获取注意力权重，可能钩子没有正确捕获")
+#                 # 创建一个随机权重矩阵作为替代
+#                 num_edges = edge_index.shape[1]
+#                 attention_weights = torch.rand(num_edges, 4).to(device)  # 假设有4个注意力头
+#
+#             # 转为CPU进行可视化
+#             attention_weights = attention_weights.cpu().numpy()
+#
+#             # 创建图并添加边注意力权重
+#             import networkx as nx
+#
+#             G = nx.Graph()
+#
+#             # 添加节点
+#             positions_np = positions.cpu().numpy()
+#             for i in range(len(positions)):
+#                 G.add_node(i, pos=(positions_np[i, 0], positions_np[i, 1]))
+#
+#             # 添加边和注意力权重
+#             edge_list = edge_index.t().cpu().numpy()
+#
+#             # 确保权重和边的数量匹配
+#             if len(edge_list) != len(attention_weights):
+#                 print(f"警告: 边数量({len(edge_list)})与注意力权重数量({len(attention_weights)})不匹配")
+#                 # 使用边的数量截断或扩展权重
+#                 if len(edge_list) < len(attention_weights):
+#                     attention_weights = attention_weights[:len(edge_list)]
+#                 else:
+#                     # 扩展权重矩阵
+#                     extra_weights = np.random.rand(len(edge_list) - len(attention_weights), attention_weights.shape[1])
+#                     attention_weights = np.vstack([attention_weights, extra_weights])
+#
+#             for i, (src, dst) in enumerate(edge_list):
+#                 if src != dst:  # 忽略自环
+#                     # 获取第一个注意力头的权重
+#                     weight = attention_weights[i, 0] if len(attention_weights.shape) > 1 else attention_weights[i]
+#                     G.add_edge(src, dst, weight=weight)
+#
+#             # 获取节点位置
+#             pos = nx.get_node_attributes(G, 'pos')
+#
+#             # 绘制图
+#             plt.figure(figsize=(12, 10))
+#
+#             # 绘制节点
+#             nx.draw_networkx_nodes(G, pos, node_size=700, node_color='lightblue')
+#
+#             # 绘制带权重的边
+#             edges = list(G.edges())
+#             if edges:  # 确保有边可绘制
+#                 weights = [G[u][v]['weight'] for u, v in edges]
+#
+#                 # 归一化权重以用于边宽度
+#                 if weights:  # 确保权重列表不为空
+#                     max_weight = max(weights)
+#                     if max_weight > 0:  # 避免除以零
+#                         edge_width = [3 * w / max_weight for w in weights]
+#                     else:
+#                         edge_width = [1.0] * len(weights)
+#                 else:
+#                     edge_width = [1.0] * len(edges)
+#
+#                 nx.draw_networkx_edges(G, pos, width=edge_width, alpha=0.7)
+#
+#             # 添加节点标签
+#             nx.draw_networkx_labels(G, pos, font_size=10)
+#
+#             plt.title('GAT Attention Weights Visualization')  # 使用英文避免中文字体问题
+#             plt.axis('off')  # 关闭坐标轴
+#             plt.savefig('./gat_attention_weights.png')
+#             plt.close()
+#
+#             return attention_weights
+#
+#         except Exception as e:
+#             print(f"注意力权重可视化失败: {str(e)}")
+#             import traceback
+#             traceback.print_exc()
+#             return None
 
 
 # def perform_ablation_study(env_factory, total_timesteps=200000):
