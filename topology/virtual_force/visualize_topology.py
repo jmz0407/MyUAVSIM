@@ -33,6 +33,7 @@ def visualize_initial_topology(simulator):
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
     ax.set_title('Initial Network Topology')
+    plt.figure()
     plt.show()
 
 
@@ -63,4 +64,5 @@ def visualize_current_topology(simulator):
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
     ax.set_title(f'Current Network Topology at {simulator.env.now / 1e6}s')
+    plt.figure()
     plt.show()

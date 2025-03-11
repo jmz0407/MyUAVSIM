@@ -1,4 +1,16 @@
 import simpy
+import numpy as np
+import random
+import queue
+from entities.packet import DataPacket
+from routing.mp_olsr.olsr import OlsrHelloPacket,OlsrTcPacket
+from routing.multipath.amlb_opar import AMLB_OPAR
+from routing.AMLBR.adaptive_multipath.AMLBR import AMLBR
+from routing.AMLBR.manager.routing_manager import RoutingManager
+from routing.AMLBR.manager.gat_enhanced_routing_manager import GATEnhancedRoutingManager
+from routing.AMLBR.adaptive_multipath.MP_AMLBR import MP_AMLBR
+# from mac.self_tdma import Stdma
+import simpy
 import logging
 import numpy as np
 import random
@@ -11,9 +23,11 @@ from routing.dsdv.dsdv import Dsdv
 from routing.gpsr.gpsr import Gpsr
 from routing.grad.grad import Grad
 from routing.opar.opar import Opar
+from routing.mp_dsr.dsr import GlobalDSR
+from routing.mp_dsr.mp_dsr import GlobalMPDSR
 from routing.multipath.amlb_opar import AMLB_OPAR
 from routing.multipath.mp_amlb_opar import MP_AMLB_OPAR
-from routing.mp_dsr.mp_dsr import MPDSR
+from routing.multipath.mp_gat_opar import MP_GAT_OPAR
 from routing.opar.new_opar import NewOpar
 from routing.mp_olsr.mp_olsr import MP_OLSR
 from routing.q_routing.q_routing import QRouting
@@ -37,6 +51,14 @@ from simulator.TrafficGenerator import TrafficRequirement
 from mac.tra_tdma import Tra_Tdma
 from mac.stdma_test import Stdma_Test
 from routing.opar.last_opar import LastOpar
+from mac.stdma import Stdma
+from mobility.gauss_markov_3d import GaussMarkov3D
+from mobility.random_walk_3d import RandomWalk3D
+from topology.virtual_force.vf_motion_control import VfMotionController
+from energy.energy_model import EnergyModel
+from phy.large_scale_fading import *
+from simulator.TrafficGenerator import TrafficRequirement
+
 # config logging
 logging.basicConfig(filename='running_log.log',
                     filemode='w',  # there are two modes: 'a' and 'w'
@@ -185,7 +207,6 @@ class Drone:
         self.mac_protocol = Stdma(self)
         # self.mac_protocol = Stdma_Test(self)
         # self.mac_protocol = FPRP(self)
-        # self.mac_protocol = DeepSeekStdma(self)
         # self.mac_protocol = Tra_Tdma(self)
         self.mac_process_dict = dict()
         self.mac_process_finish = dict()
@@ -195,14 +216,21 @@ class Drone:
 
 
         # self.routing_protocol = Opar(self.simulator, self)
-        self.routing_protocol = LastOpar(self.simulator, self)
+        # self.routing_protocol = MP_GAT_OPAR(simulator, self)
+        # self.routing_protocol = LastOpar(self.simulator, self)
         # self.routing_protocol = AMLB_OPAR(self.simulator, self)
+        self.routing_protocol = AMLBR(self.simulator, self)
+        # self.routing_protocol = RoutingManager(self.simulator, self)
+        # self.routing_protocol = GATEnhancedRoutingManager(self.simulator, self)
+        # self.routing_protocol = MP_AMLBR(self.simulator, self)
         # self.routing_protocol = MP_AMLB_OPAR(self.simulator, self)
         # self.routing_protocol = NewOpar(self.simulator, self)
         # self.routing_protocol = MPDSR(self.simulator, self)
         # self.routing_protocol = MP_OLSR(self.simulator, self)
         # self.routing_protocol = Olsr(self.simulator, self)
         # self.routing_protocol = DirectOlsr(self.simulator, self)
+        # self.routing_protocol = GlobalDSR(self.simulator, self)
+        # self.routing_protocol = GlobalMPDSR(self.simulator, self)
         self.mobility_model = RandomWalk3D(self)
         self.mobility_model = GaussMarkov3D(self)
         self.motion_controller = VfMotionController(self)

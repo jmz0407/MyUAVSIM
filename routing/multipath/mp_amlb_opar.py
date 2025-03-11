@@ -13,6 +13,8 @@ from routing.opar.opar import Opar
 from collections import defaultdict
 
 
+
+
 class MP_AMLB_OPAR(Opar):
     def __init__(self, simulator, my_drone):
         super().__init__(simulator, my_drone)

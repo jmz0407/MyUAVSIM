@@ -9,7 +9,7 @@ MAP_WIDTH = 500  # m, width of the map
 MAP_HEIGHT = 500  # m, height of the map
 SIM_TIME = 5 * 1e6  # us, total simulation time
 NUMBER_OF_DRONES = 10  # number of drones in the network
-STATIC_CASE = 0  # whether to simulate a static network
+STATIC_CASE = 1  # whether to simulate a static network
 HETEROGENEOUS = 0  # heterogeneous network support (in terms of speed)
 LOGGING_LEVEL = logging.INFO  # whether to print the detail information during simulation
 
@@ -26,7 +26,7 @@ ROTOR_BLADE_TIP_SPEED = 500
 MEAN_ROTOR_VELOCITY = 7.2  # mean rotor induced velocity in hover
 FUSELAGE_DRAG_RATIO = 0.3
 INITIAL_ENERGY = 20 * 1e3  # in joule
-ENERGY_THRESHOLD = 2000  # in joule
+ENERGY_THRESHOLD = 200  # in joule
 MAX_QUEUE_SIZE = 200  # maximum size of drone's queue
 
 # ----------------------- radio parameters ----------------------- #
@@ -126,6 +126,15 @@ DSDV_UPDATE_INTERVAL = 1e6
 # 多路径路由配置
 MULTIPATH_ENABLED = True
 MAX_PATHS = 3  # 最大路径数
-PATH_SELECTION_STRATEGY = 'round_robin'  # 'weighted', 'round_robin', 'adaptive'
-
-
+USE_GAT = True    # 启用GAT
+PATH_SELECTION_STRATEGY = 'adaptive'  # 'weighted', 'round_robin', 'adaptive', 'best_quality'
+# config.py中的完整GAT选项
+GAT_ENABLED = True                # 是否启用GAT
+GAT_UPDATE_INTERVAL = 1 * 1e6     # GAT模型更新间隔(微秒)
+GAT_HIDDEN_DIM = 32               # GAT隐藏层维度
+GAT_HEADS = 2                     # 注意力头数量
+GAT_TRAINING_EPOCHS = 3           # 每次训练的轮次
+GAT_LEARNING_RATE = 0.001         # 学习率
+GAT_DROPOUT = 0.1                 # Dropout率
+PATH_SELECTION_STRATEGY = 'gat'   # 使用GAT策略
+USE_ATTENTION_WEIGHTS = True      # 是否使用注意力权重

@@ -33,6 +33,7 @@ ax.legend()
 plt.ylim(0, 100)
 plt.ylabel("Packet delivery ratio (%)")
 plt.xlabel("Drone velocity (m/s)")
+plt.figure()
 plt.show()
 
 e2e_gpsr = [4.0215, 3.74, 4.313, 4.4473, 3.887]
@@ -65,4 +66,5 @@ ax.set_xticklabels(('10', '20', '30', '40', '50'))
 ax.legend()
 plt.ylabel("Average end-to-end delay (ms)")
 plt.xlabel("Drone velocity (m/s)")
+plt.figure()
 plt.show()

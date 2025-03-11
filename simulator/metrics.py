@@ -284,6 +284,12 @@ class Metrics:
             throughput += value
         return throughput
 
+    def calculate_pdr(self, simulator):
+        """计算数据包交付率"""
+        if simulator.metrics.datapacket_generated_num > 0:
+            return len(simulator.metrics.datapacket_arrived) / simulator.metrics.datapacket_generated_num
+        return 0
+
     def periodic_metrics_record(self):
         """定期记录指标，用于绘制时间序列图"""
         # 每0.5秒记录一次指标
@@ -353,6 +359,7 @@ class Metrics:
             plt.text(i, v, f'{v:.1f}J', ha='center', va='bottom')
 
         plt.tight_layout()
+        plt.figure()
         plt.show()
 
         # 使用时间序列能量图
@@ -424,6 +431,7 @@ class Metrics:
 
             # 调整布局以避免子图重叠
             plt.tight_layout()
+            plt.figure()
             plt.show()
 
         # 使用时间序列指标绘制更丰富的图表

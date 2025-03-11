@@ -366,68 +366,6 @@ class StdmaEnv(gym.Env):
             return False
 
     # only 复用
-    # def _get_next_node(self):
-    #     """使用图着色方法获取下一个要分配时隙的节点"""
-    #     try:
-    #         # 1. 获取路由路径上的节点
-    #         if self.current_requirement and self.current_requirement.routing_path:
-    #             route_nodes = self.current_requirement.routing_path
-    #         else:
-    #             return None  # 如果没有路由路径，返回None
-    #
-    #         # 2. 创建一个用于记录哪些节点已经分配时隙的集合
-    #         assigned_nodes = set()  # 跟踪已分配时隙的节点
-    #
-    #         # 遍历当前时隙分配情况，记录已分配的节点
-    #         for slot, nodes in self.current_schedule.items():
-    #             assigned_nodes.update(nodes)  # 添加已分配的节点到集合中
-    #         print(f"已分配的时隙：{self.current_schedule}")
-    #         print(f"已分配的节点：{assigned_nodes}")
-    #
-    #         # 3. 确保按照路径顺序为每个节点分配时隙
-    #         for node in route_nodes:
-    #             if node in assigned_nodes:
-    #                 # 如果节点已经分配时隙，跳过
-    #                 print(f"节点 {node} 已经分配过时隙，跳过")
-    #                 continue
-    #
-    #             # 4. 寻找可以复用的时隙
-    #             slot_assigned = False
-    #             for slot in range(self.current_num_slots):
-    #                 if node not in self.current_schedule.get(slot, []):
-    #                     # 检查该节点与当前时隙中的其他节点是否存在干扰
-    #                     conflict = False
-    #                     for neighbor in self.current_schedule.get(slot, []):
-    #                         if self._is_conflict(node, neighbor):  # 判断是否有干扰
-    #                             conflict = True
-    #                             break
-    #
-    #                     if not conflict:
-    #                         # 如果没有冲突，则将节点分配到该时隙
-    #                         if slot not in self.current_schedule:
-    #                             self.current_schedule[slot] = []  # 初始化时隙
-    #                         self.current_schedule[slot].append(node)
-    #                         assigned_nodes.add(node)  # 将节点标记为已分配
-    #                         print(f"节点 {node} 复用时隙 {slot}")
-    #                         slot_assigned = True
-    #                         break  # 跳出时隙循环，继续为下一个节点分配
-    #
-    #             if not slot_assigned:
-    #                 # 如果找不到合适的复用时隙，为节点分配一个新的时隙
-    #                 new_slot = len(self.current_schedule)  # 新的时隙索引
-    #                 self.current_schedule[new_slot] = [node]
-    #                 assigned_nodes.add(node)  # 将节点标记为已分配
-    #                 print(f"节点 {node} 被分配到新时隙 {new_slot}")
-    #
-    #         # 如果没有满足条件的节点可分配时隙，则返回None
-    #         return None
-    #
-    #     except Exception as e:
-    #         print(f"Error in _get_next_node: {str(e)}")
-    #         traceback.print_exc()
-    #         return None
-
-    # 会重用时隙
     def _get_next_node(self):
         """使用图着色方法获取下一个要分配时隙的节点"""
         try:
@@ -443,11 +381,14 @@ class StdmaEnv(gym.Env):
             # 遍历当前时隙分配情况，记录已分配的节点
             for slot, nodes in self.current_schedule.items():
                 assigned_nodes.update(nodes)  # 添加已分配的节点到集合中
+            # print(f"已分配的时隙：{self.current_schedule}")
+            # print(f"已分配的节点：{assigned_nodes}")
 
             # 3. 确保按照路径顺序为每个节点分配时隙
             for node in route_nodes:
                 if node in assigned_nodes:
                     # 如果节点已经分配时隙，跳过
+                    # print(f"节点 {node} 已经分配过时隙，跳过")
                     continue
 
                 # 4. 寻找可以复用的时隙
@@ -469,7 +410,7 @@ class StdmaEnv(gym.Env):
                             assigned_nodes.add(node)  # 将节点标记为已分配
                             # print(f"节点 {node} 复用时隙 {slot}")
                             slot_assigned = True
-                            break
+                            break  # 跳出时隙循环，继续为下一个节点分配
 
                 if not slot_assigned:
                     # 如果找不到合适的复用时隙，为节点分配一个新的时隙
@@ -478,11 +419,6 @@ class StdmaEnv(gym.Env):
                     assigned_nodes.add(node)  # 将节点标记为已分配
                     # print(f"节点 {node} 被分配到新时隙 {new_slot}")
 
-                return node  # 返回已分配时隙的节点
-            # # 2. 为其他未分配节点分配时隙
-            # for node in range(self.num_nodes):
-            #     if node not in self.assigned_nodes:
-            #         return node
             # 如果没有满足条件的节点可分配时隙，则返回None
             return None
 
@@ -490,6 +426,70 @@ class StdmaEnv(gym.Env):
             print(f"Error in _get_next_node: {str(e)}")
             traceback.print_exc()
             return None
+
+    # 会重用时隙
+    # def _get_next_node(self):
+    #     """使用图着色方法获取下一个要分配时隙的节点"""
+    #     try:
+    #         # 1. 获取路由路径上的节点
+    #         if self.current_requirement and self.current_requirement.routing_path:
+    #             route_nodes = self.current_requirement.routing_path
+    #         else:
+    #             return None  # 如果没有路由路径，返回None
+    #
+    #         # 2. 创建一个用于记录哪些节点已经分配时隙的集合
+    #         assigned_nodes = set()  # 跟踪已分配时隙的节点
+    #
+    #         # 遍历当前时隙分配情况，记录已分配的节点
+    #         for slot, nodes in self.current_schedule.items():
+    #             assigned_nodes.update(nodes)  # 添加已分配的节点到集合中
+    #
+    #         # 3. 确保按照路径顺序为每个节点分配时隙
+    #         for node in route_nodes:
+    #             if node in assigned_nodes:
+    #                 # 如果节点已经分配时隙，跳过
+    #                 continue
+    #
+    #             # 4. 寻找可以复用的时隙
+    #             slot_assigned = False
+    #             for slot in range(self.current_num_slots):
+    #                 if node not in self.current_schedule.get(slot, []):
+    #                     # 检查该节点与当前时隙中的其他节点是否存在干扰
+    #                     conflict = False
+    #                     for neighbor in self.current_schedule.get(slot, []):
+    #                         if self._is_conflict(node, neighbor):  # 判断是否有干扰
+    #                             conflict = True
+    #                             break
+    #
+    #                     if not conflict:
+    #                         # 如果没有冲突，则将节点分配到该时隙
+    #                         if slot not in self.current_schedule:
+    #                             self.current_schedule[slot] = []  # 初始化时隙
+    #                         self.current_schedule[slot].append(node)
+    #                         assigned_nodes.add(node)  # 将节点标记为已分配
+    #                         # print(f"节点 {node} 复用时隙 {slot}")
+    #                         slot_assigned = True
+    #                         break
+    #
+    #             if not slot_assigned:
+    #                 # 如果找不到合适的复用时隙，为节点分配一个新的时隙
+    #                 new_slot = len(self.current_schedule)  # 新的时隙索引
+    #                 self.current_schedule[new_slot] = [node]
+    #                 assigned_nodes.add(node)  # 将节点标记为已分配
+    #                 # print(f"节点 {node} 被分配到新时隙 {new_slot}")
+    #
+    #             return node  # 返回已分配时隙的节点
+    #         # # 2. 为其他未分配节点分配时隙
+    #         # for node in range(self.num_nodes):
+    #         #     if node not in self.assigned_nodes:
+    #         #         return node
+    #         # 如果没有满足条件的节点可分配时隙，则返回None
+    #         return None
+    #
+    #     except Exception as e:
+    #         print(f"Error in _get_next_node: {str(e)}")
+    #         traceback.print_exc()
+    #         return None
 
     # def _get_next_node(self):
     #     """获取下一个要分配时隙的节点，并检查复用机会"""
@@ -1024,8 +1024,8 @@ class StdmaEnv(gym.Env):
 
             # 创建OPAR实例
             src_drone = self.simulator.drones[src_id]
-            # opar = LastOpar(self.simulator, src_drone)
-            opar = AMLB_OPAR(self.simulator, src_drone)
+            opar = LastOpar(self.simulator, src_drone)
+            # opar = AMLB_OPAR(self.simulator, src_drone)
             # 计算代价矩阵
             cost_matrix = opar.calculate_cost_matrix()
 
@@ -1083,8 +1083,8 @@ class StdmaEnv(gym.Env):
                 if final_path[0] != src_id:
                     final_path.insert(0, src_id)
                 # 确保终点是dst_id，并移除之前可能出现的dst_id
-                final_path = [node for node in final_path if node != dst_id]
-                final_path.append(dst_id)
+                # final_path = [node for node in final_path if node != dst_id]
+                # final_path.append(dst_id)
 
                 # # 移除源节点
                 # if final_path:

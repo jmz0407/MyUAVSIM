@@ -162,7 +162,7 @@ class TrafficGenerator:
                     src_drone=source_drone,
                     dst_drone=dest_drone,
                     creation_time=self.env.now,
-                    data_packet_id=self.simulator.get_next_packet_id(),
+                    data_packet_id=1,
                     data_packet_length=pattern['packet_size'],
                     simulator=self.simulator,
                     priority=2
@@ -203,6 +203,39 @@ class TrafficGenerator:
             if burst < pattern['num_bursts'] - 1:
                 yield self.env.timeout(pattern['burst_interval'])
 
+
+    def generate_traffic_requirement(self, source_id, dest_id, num_packets, delay_req, qos_req, start_time=0):
+        """生成业务需求消息"""
+        requirement = TrafficRequirement(
+            source_id=source_id,
+            dest_id=dest_id,
+            num_packets=num_packets,
+            delay_req=delay_req,
+            qos_req=qos_req,
+            simulator=self.simulator,
+        )
+        requirement.src_drone = self.simulator.drones[source_id]
+        requirement.dst_drone = self.simulator.drones[dest_id]
+        requirement.creation_time = self.simulator.env.now
+
+        # 添加到源节点的发送队列
+        source_drone = self.simulator.drones[source_id]
+        source_drone.transmitting_queue.put(requirement)
+
+        # 启动实际的业务流生成
+        def generate_actual_traffic():
+            # 确保时隙已分配
+            yield self.simulator.env.timeout(100000)
+
+            # 生成实际的数据包流
+            self.generate_traffic(
+                source_id=source_id,
+                dest_id=dest_id,
+                num_packets=num_packets
+            )
+
+        self.simulator.env.process(generate_actual_traffic())
+
     def generate_traffic(self, source_id, dest_id, num_packets, packet_interval=2000):
         source_drone = self.simulator.drones[source_id]
         dest_drone = self.simulator.drones[dest_id]
@@ -242,7 +275,6 @@ class TrafficGenerator:
                     break
 
                 yield self.env.timeout(packet_interval)
-
 
         # 启动生成过程
         self.env.process(generate())

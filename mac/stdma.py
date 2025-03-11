@@ -6,7 +6,7 @@ from utils.util_function import euclidean_distance
 from entities.packet import DataPacket
 from mac.LinkQualityManager import LinkQualityManager
 from mac.LoadBalancer import LoadBalancer
-from simulator.TrafficGenerator import TrafficRequirement
+from simulator.improved_traffic_generator import TrafficRequirement
 import traceback
 import copy
 class Stdma:
@@ -608,7 +608,7 @@ class Stdma:
             }
             #日志记录traffic
             logging.info(f"UAV{self.my_drone.identifier} received traffic requirement: {traffic_info}")
-            yield self.env.process(self._transmit_packet(packet))
+            # yield self.env.process(self._transmit_packet(packet))
             try:
                 if hasattr(self, 'use_rl') and self.use_rl and self.rl_model is not None:
                     # 使用RL重新分配时隙
@@ -625,7 +625,8 @@ class Stdma:
                             new_schedule[slot] = []
                         # new_schedule[slot].append(node)
 
-                        obs, _, done, _, _,new_schedule = self.rl_env.step(action)
+                        obs, _, done, _, info = self.rl_env.step(action)
+                        new_schedule = info.get('schedule', {})
                         if done:
                             break
 
@@ -653,7 +654,7 @@ class Stdma:
 
 
         # 数据包流管理
-        if isinstance(packet, DataPacket):
+        elif isinstance(packet, DataPacket):
             # flow_id = f"flow_{packet.src_drone.identifier}_{packet.dst_drone.identifier}"
             # self.flow_queue.setdefault(flow_id, []).append(packet)
             # self.flow_stats.setdefault(flow_id, {

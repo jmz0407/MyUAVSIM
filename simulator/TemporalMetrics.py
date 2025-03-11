@@ -519,6 +519,7 @@ class TemporalMetrics:
         # 保存图表并尝试显示
         plt.savefig(f'{metric_name}_over_time.png', dpi=300)
         try:
+            plt.figure()
             plt.show()
         except Exception as e:
             print(f"无法显示图表，已保存到文件: {metric_name}_over_time.png")
