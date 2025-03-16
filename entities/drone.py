@@ -34,6 +34,8 @@ from routing.q_routing.q_routing import QRouting
 from routing.mp_olsr.olsr import Olsr
 from mac.csma_ca import CsmaCa
 from mac.reuse_slot_tdma import Tdma
+from mac.BasicStdma import BasicStdma
+from mac.GraphColoringStdma import GraphColoringStdma
 # from mac.self_tdma import Stdma
 from mac.stdma import Stdma
 from mac.FPRP import FPRP
@@ -204,7 +206,9 @@ class Drone:
 
         # self.mac_protocol = CsmaCa(self)
         # self.mac_protocol = Tdma(self)  # Use TDMA protocol instead of CSMA/CA
-        self.mac_protocol = Stdma(self)
+        self.mac_protocol = BasicStdma(self)
+        # self.mac_protocol = GraphColoringStdma(self)
+        # self.mac_protocol = Stdma(self)
         # self.mac_protocol = Stdma_Test(self)
         # self.mac_protocol = FPRP(self)
         # self.mac_protocol = Tra_Tdma(self)
@@ -219,14 +223,14 @@ class Drone:
         # self.routing_protocol = MP_GAT_OPAR(simulator, self)
         # self.routing_protocol = LastOpar(self.simulator, self)
         # self.routing_protocol = AMLB_OPAR(self.simulator, self)
-        self.routing_protocol = AMLBR(self.simulator, self)
+        # self.routing_protocol = AMLBR(self.simulator, self)
         # self.routing_protocol = RoutingManager(self.simulator, self)
         # self.routing_protocol = GATEnhancedRoutingManager(self.simulator, self)
         # self.routing_protocol = MP_AMLBR(self.simulator, self)
         # self.routing_protocol = MP_AMLB_OPAR(self.simulator, self)
         # self.routing_protocol = NewOpar(self.simulator, self)
         # self.routing_protocol = MPDSR(self.simulator, self)
-        # self.routing_protocol = MP_OLSR(self.simulator, self)
+        self.routing_protocol = MP_OLSR(self.simulator, self)
         # self.routing_protocol = Olsr(self.simulator, self)
         # self.routing_protocol = DirectOlsr(self.simulator, self)
         # self.routing_protocol = GlobalDSR(self.simulator, self)
