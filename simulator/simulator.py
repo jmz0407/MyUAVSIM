@@ -15,7 +15,8 @@ from entities.drone import Drone
 
 logging.getLogger('matlotlib').setLevel(logging.WARNING)
 import matplotlib.pyplot as plt
-
+import matplotlib
+matplotlib.font_manager._log.setLevel(logging.WARNING)
 plt.rcParams['font.sans-serif'] = ['STFangsong']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
@@ -80,7 +81,8 @@ class Simulator:
 
         # 创建改进的业务流生成器
         self.traffic_generator = TrafficGenerator(self)
-
+        from simulator.improved_traffic_generator import BatchTrafficManager
+        self.batch_traffic_manager = BatchTrafficManager(self)
         # 添加全局邻居表和二跳邻居表
         self.global_neighbor_table = {}  # 格式: {drone_id: set(neighbor_ids)}
         self.global_two_hop_neighbors = {}  # 格式: {drone_id: {neighbor_id: set(two_hop_neighbors)}}
@@ -95,9 +97,55 @@ class Simulator:
         # 设置业务流 - 在初始化末尾运行
         self.env.process(self.setup_demo_traffic_flows())
 
-    def generate_traffic_requirement(self, source_id, dest_id, num_packets,
-                                     delay_req, qos_req, start_time=0, priority=None,
-                                     traffic_type=None):
+    # def generate_traffic_requirement(self, source_id, dest_id, num_packets,
+    #                                  delay_req, qos_req, start_time=0, priority=None,
+    #                                  traffic_type=None,use_batch=True):
+    #     """
+    #     生成业务需求消息 - 与旧API兼容的方法
+    #     """
+    #     # 设置默认值
+    #     if traffic_type is None:
+    #         traffic_type = TrafficType.CBR
+    #
+    #     if priority is None:
+    #         priority = PriorityLevel.NORMAL
+    #
+    #     # 创建业务需求
+    #     requirement = self.traffic_generator.create_traffic_requirement(
+    #         source_id=source_id,
+    #         dest_id=dest_id,
+    #         num_packets=num_packets,
+    #         delay_req=delay_req,
+    #         qos_req=qos_req,
+    #         traffic_type=traffic_type,
+    #         priority=priority,
+    #         start_time=start_time
+    #     )
+    #
+    #     # 设置源和目标无人机
+    #     requirement.src_drone = self.drones[source_id]
+    #     requirement.dst_drone = self.drones[dest_id]
+    #
+    #     # 提交业务需求
+    #     self.traffic_generator.submit_traffic_requirement(requirement)
+    #
+    #
+    #     # 为业务需求生成实际业务流
+    #     self.traffic_generator.generate_traffic_for_requirement(requirement.packet_id)
+    #
+    #     return requirement
+
+    def generate_traffic_requirement(self,
+                                     source_id,
+                                     dest_id,
+                                     num_packets,
+                                     delay_req,
+                                     qos_req,
+                                     start_time=0,
+                                     priority=None,
+
+                                     traffic_type=None,
+                                     use_batch=True):  # 添加use_batch参数
         """
         生成业务需求消息 - 与旧API兼容的方法
         """
@@ -108,112 +156,137 @@ class Simulator:
         if priority is None:
             priority = PriorityLevel.NORMAL
 
-        # 创建业务需求
-        requirement = self.traffic_generator.create_traffic_requirement(
-            source_id=source_id,
-            dest_id=dest_id,
-            num_packets=num_packets,
-            delay_req=delay_req,
-            qos_req=qos_req,
-            traffic_type=traffic_type,
-            priority=priority,
-            start_time=start_time
-        )
+        if use_batch:
+            # 使用批量业务管理器创建和处理业务需求
+            requirement = self.batch_traffic_manager.create_traffic_requirement(
+                source_id=source_id,
+                dest_id=dest_id,
+                num_packets=num_packets,
+                delay_req=delay_req,
+                qos_req=qos_req,
+                traffic_type=traffic_type,
+                priority=priority,
+                start_time=start_time
+            )
+            return requirement
+        else:
+            # 原有的单个业务需求处理逻辑
+            requirement = self.traffic_generator.create_traffic_requirement(
+                source_id=source_id,
+                dest_id=dest_id,
+                num_packets=num_packets,
+                delay_req=delay_req,
+                qos_req=qos_req,
+                traffic_type=traffic_type,
+                priority=priority,
+                start_time=start_time
+            )
 
-        # 设置源和目标无人机
-        requirement.src_drone = self.drones[source_id]
-        requirement.dst_drone = self.drones[dest_id]
+            # 设置源和目标无人机
+            requirement.src_drone = self.drones[source_id]
+            requirement.dst_drone = self.drones[dest_id]
 
-        # 提交业务需求
-        self.traffic_generator.submit_traffic_requirement(requirement)
+            # 提交业务需求
+            self.traffic_generator.submit_traffic_requirement(requirement)
 
+            # 为业务需求生成实际业务流
+            self.traffic_generator.generate_traffic_for_requirement(requirement.packet_id)
 
-        # 为业务需求生成实际业务流
-        self.traffic_generator.generate_traffic_for_requirement(requirement.packet_id)
-
-        return requirement
-
+            return requirement
     def setup_demo_traffic_flows(self):
         """设置演示用的多种业务流"""
         # 等待2秒后开始生成业务流，确保路由已充分建立
-        # yield self.env.timeout(2 * 1e6)
+        yield self.env.timeout(1 * 1e6)
 
         # # 例1: 标准CBR流
-        self.generate_traffic_requirement(
+        # self.generate_traffic_requirement(
+        #     source_id=4,
+        #     dest_id=5,
+        #     num_packets=400,
+        #     delay_req=1000,
+        #     qos_req=0.9,
+        #     start_time=0,
+        #     traffic_type=TrafficType.CBR
+        # )
+        cbr_config = self.traffic_generator.create_cbr_flow(
             source_id=4,
             dest_id=5,
-            num_packets=200,
-            delay_req=1000,
-            qos_req=0.9,
-            start_time=0,
-            traffic_type=TrafficType.CBR
-        )
-
-        # 例2: 使用不同API创建VBR流 - 每0.5秒后启动一个
-        yield self.env.timeout(0.5 * 1e6)
-
-        vbr_config = self.traffic_generator.create_vbr_flow(
-            source_id=4,
-            dest_id=5,
-            num_packets=150,
-            mean_rate=2,
-            peak_rate=4,
-            priority=PriorityLevel.HIGH
-        )
-        vbr_flow_id = self.traffic_generator.setup_traffic_flow(**vbr_config)
-        self.traffic_generator.start_traffic_flow(vbr_flow_id)
-
-        # 例3: 使用直接配置创建突发流 - 再等0.5秒启动
-        yield self.env.timeout(0.5 * 1e6)
-
-        burst_flow_id = self.traffic_generator.setup_traffic_flow(
-            source_id=4,
-            dest_id=5,
-            traffic_type=TrafficType.BURST,
-            num_packets=100,
-            packet_size=2048,  # 使用更大的数据包
-            priority=PriorityLevel.CRITICAL,
-            params={
-                'burst_size': 10,
-                'num_bursts': 10,
-                'burst_interval': 200000,  # 200ms
-                'packet_interval': 1000  # 1ms
-            }
-        )
-        self.traffic_generator.start_traffic_flow(burst_flow_id)
-
-        # 例4: 创建泊松分布流量 - 再等0.5秒启动
-        yield self.env.timeout(0.5 * 1e6)
-
-        poisson_flow_id = self.traffic_generator.setup_traffic_flow(
-            source_id=6,
-            dest_id=7,
-            traffic_type=TrafficType.POISSON,
-            num_packets=200,
+            num_packets=10000,
+            data_rate=1.0,  # 设置合适的数据速率
             priority=PriorityLevel.NORMAL,
-            params={
-                'lambda': 2000.0  # 平均每秒2个包
-            }
+            start_time=0
         )
-        self.traffic_generator.start_traffic_flow(poisson_flow_id)
+        # 设置流量参数
+        cbr_flow_id = self.traffic_generator.setup_traffic_flow(**cbr_config)
+        # 启动流量
+        self.traffic_generator.start_traffic_flow(cbr_flow_id)
 
-        # 如果有超过8个节点，还可以创建周期性流
-        if self.n_drones > 8:
-            # 例5: 创建周期性流量 - 再等0.5秒启动
-            yield self.env.timeout(0.5 * 1e6)
 
-            periodic_flow_id = self.traffic_generator.setup_traffic_flow(
-                source_id=8,
-                dest_id=9,
-                traffic_type=TrafficType.PERIODIC,
-                num_packets=150,
-                priority=PriorityLevel.LOW,
-                params={
-                    'period': 50000,  # 50ms周期
-                    'jitter': 0.1  # 10%抖动
-                }
-            )
-            self.traffic_generator.start_traffic_flow(periodic_flow_id)
+        # # 例2: 使用不同API创建VBR流 - 每0.5秒后启动一个
+        # yield self.env.timeout(1 * 1e6)
+        # #
+        # vbr_config = self.traffic_generator.create_vbr_flow(
+        #     source_id=4,
+        #     dest_id=5,
+        #     num_packets=200,
+        #     mean_rate=2,
+        #     peak_rate=4,
+        #     priority=PriorityLevel.HIGH
+        # )
+        # vbr_flow_id = self.traffic_generator.setup_traffic_flow(**vbr_config)
+        # self.traffic_generator.start_traffic_flow(vbr_flow_id)
+        #
+        # # 例3: 使用直接配置创建突发流 - 再等0.5秒启动
+        # yield self.env.timeout(1 * 1e6)
+        #
+        # burst_flow_id = self.traffic_generator.setup_traffic_flow(
+        #     source_id=7,
+        #     dest_id=2,
+        #     traffic_type=TrafficType.BURST,
+        #     num_packets=200,
+        #     packet_size=2048,  # 使用更大的数据包
+        #     priority=PriorityLevel.CRITICAL,
+        #     params={
+        #         'burst_size': 10,
+        #         'num_bursts': 10,
+        #         'burst_interval': 200000,  # 200ms
+        #         'packet_interval': 1000  # 1ms
+        #     }
+        # )
+        # self.traffic_generator.start_traffic_flow(burst_flow_id)
+        #
+        # # 例4: 创建泊松分布流量 - 再等0.5秒启动
+        # yield self.env.timeout(1 * 1e6)
+        #
+        # poisson_flow_id = self.traffic_generator.setup_traffic_flow(
+        #     source_id=9,
+        #     dest_id=5,
+        #     traffic_type=TrafficType.POISSON,
+        #     num_packets=200,
+        #     priority=PriorityLevel.NORMAL,
+        #     params={
+        #         'lambda': 2000.0  # 平均每秒2个包
+        #     }
+        # )
+        # self.traffic_generator.start_traffic_flow(poisson_flow_id)
+        #
+        # # 如果有超过8个节点，还可以创建周期性流
+        # if self.n_drones > 8:
+        #     # 例5: 创建周期性流量 - 再等0.5秒启动
+        #     yield self.env.timeout(1 * 1e6)
+        #
+        #     periodic_flow_id = self.traffic_generator.setup_traffic_flow(
+        #         source_id=3,
+        #         dest_id=8,
+        #         traffic_type=TrafficType.PERIODIC,
+        #         num_packets=200,
+        #         priority=PriorityLevel.LOW,
+        #         params={
+        #             'period': 50000,  # 50ms周期
+        #             'jitter': 0.1  # 10%抖动
+        #         }
+        #     )
+        #     self.traffic_generator.start_traffic_flow(periodic_flow_id)
 
     def update_global_neighbor_table(self):
         """定期更新全局邻居表"""

@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Set, Any, Union
 from entities.packet import DataPacket, Packet
 from utils import config
-
 # 配置日志
 logging.basicConfig(
     filename='traffic_generator.log',
@@ -18,6 +17,8 @@ logging.basicConfig(
 # 全局数据包ID计数器
 GLOBAL_DATA_PACKET_ID = 0
 GL_ID_TRAFFIC_REQUIREMENT = 60000
+
+
 
 
 # 业务流类型枚举
@@ -261,6 +262,9 @@ class TrafficGenerator:
         # 获取流配置
         flow_config = self.traffic_flows[flow_id]
 
+        # 为所有类型的业务流创建业务需求报文
+        self._create_traffic_requirement_for_flow(flow_config)
+
         # 创建生成器进程
         if immediate:
             generator = self.env.process(self._generate_traffic(flow_id))
@@ -272,6 +276,81 @@ class TrafficGenerator:
 
         logging.info(f"启动业务流 {flow_id}")
         return True
+
+    def _create_traffic_requirement_for_flow(self, flow_config):
+        """
+        为任意类型的业务流创建业务需求报文
+
+        Args:
+            flow_config: 业务流配置
+
+        Returns:
+            TrafficRequirement: 创建的业务需求对象
+        """
+        # 提取流配置参数
+        source_id = flow_config['source_id']
+        dest_id = flow_config['dest_id']
+        traffic_type = flow_config['traffic_type']
+        num_packets = flow_config['num_packets']
+        delay_req = flow_config.get('delay_req', 5000)  # 默认延迟要求
+        qos_req = flow_config.get('qos_req', 0.9)  # 默认QoS要求
+        priority = flow_config.get('priority', PriorityLevel.NORMAL)
+        start_time = flow_config.get('start_time', 0)
+        packet_size = flow_config.get('packet_size', config.DATA_PACKET_LENGTH)
+        data_rate = flow_config.get('data_rate', 1.0)
+
+        # 创建基本参数字典
+        req_params = {
+            'source_id': source_id,
+            'dest_id': dest_id,
+            'num_packets': num_packets,
+            'delay_requirement': delay_req,
+            'qos_requirement': qos_req,
+            'traffic_type': traffic_type,
+            'priority': priority,
+            'start_time': start_time,
+            'packet_size': packet_size,
+            'data_rate': data_rate,
+            'simulator': self.simulator
+        }
+
+        # 处理特定业务类型的额外参数
+        # 注意：我们不直接传递这些参数，而是将它们存储在req_params中处理
+        if 'params' in flow_config:
+            # 对于有特定参数的业务类型，将它们存储在一个字典中
+            # 但不直接传递给构造函数
+            extra_params = {}
+
+            if traffic_type == TrafficType.VBR:
+                if 'peak_rate' in flow_config['params']:
+                    extra_params['peak_rate'] = flow_config['params']['peak_rate']
+                    extra_params['min_rate'] = flow_config['params'].get('min_rate', data_rate * 0.5)
+            elif traffic_type == TrafficType.BURST:
+                extra_params['burst_size'] = flow_config['params'].get('burst_size', 10)
+                extra_params['num_bursts'] = flow_config['params'].get('num_bursts', 5)
+                extra_params['burst_interval'] = flow_config['params'].get('burst_interval', 100000)
+            elif traffic_type == TrafficType.PERIODIC:
+                # 对于周期性业务，将period和jitter作为额外信息存储
+                extra_params['period_info'] = flow_config['params'].get('period', 1e3)
+                extra_params['jitter_info'] = flow_config['params'].get('jitter', 0.1)
+            elif traffic_type == TrafficType.POISSON:
+                extra_params['lambda_rate'] = flow_config['params'].get('lambda', 500)
+            elif traffic_type == TrafficType.PARETO:
+                extra_params['alpha'] = flow_config['params'].get('alpha', 1.5)
+                extra_params['scale'] = flow_config['params'].get('scale', 100000)
+            elif traffic_type == TrafficType.CUSTOM:
+                # 自定义参数直接传递
+                extra_params.update(flow_config['params'])
+
+            # 将extra_params作为一个单独的参数传递
+            req_params['extra_params'] = extra_params
+
+        # 创建业务需求报文
+        requirement = self.create_traffic_requirement(**req_params)
+
+        logging.info(f"为{traffic_type.name}类型业务流创建业务需求报文: {source_id}->{dest_id}, 包数: {num_packets}")
+
+        return requirement
 
     def _delayed_start(self, flow_id, delay):
         """延迟启动业务流"""
@@ -793,8 +872,9 @@ class TrafficGenerator:
         return True
 
     def create_traffic_requirement(self, source_id, dest_id, num_packets,
-                                   delay_req, qos_req, traffic_type=TrafficType.CBR,
-                                   priority=PriorityLevel.NORMAL, start_time=0, **params):
+                                   delay_requirement, qos_requirement, traffic_type=TrafficType.CBR,
+                                   priority=PriorityLevel.NORMAL, start_time=0, packet_size=None,
+                                   data_rate=None, simulator=None, extra_params=None, **kwargs):
         """
         创建业务需求消息(用于路由准备)
 
@@ -802,66 +882,104 @@ class TrafficGenerator:
             source_id: 源节点ID
             dest_id: 目标节点ID
             num_packets: 数据包数量
-            delay_req: 延迟要求(ms)
-            qos_req: QoS要求(0-1)
+            delay_requirement: 延迟要求(ms)
+            qos_requirement: QoS要求(0-1)
             traffic_type: 业务类型
             priority: 优先级
             start_time: 开始时间(ns)
-            **params: 其他参数
+            packet_size: 数据包大小
+            data_rate: 数据速率
+            simulator: 仿真器实例
+            extra_params: 特定业务类型的额外参数字典
+            **kwargs: 其他参数
 
         Returns:
             TrafficRequirement: 业务需求对象
         """
-        # 创建业务需求
-        requirement = TrafficRequirement(
-            source_id=source_id,
-            dest_id=dest_id,
-            num_packets=num_packets,
-            delay_requirement=delay_req,
-            qos_requirement=qos_req,
-            traffic_type=traffic_type,
-            priority=priority,
-            start_time=start_time,
-            simulator=self.simulator,
-            **params
-        )
+        # 创建基本参数字典
+        requirement_params = {
+            'source_id': source_id,
+            'dest_id': dest_id,
+            'num_packets': num_packets,
+            'delay_requirement': delay_requirement,
+            'qos_requirement': qos_requirement,
+            'traffic_type': traffic_type,
+            'priority': priority,
+            'start_time': start_time,
+            'simulator': simulator
+        }
+
+        # 添加可选参数
+        if packet_size is not None:
+            requirement_params['packet_size'] = packet_size
+        if data_rate is not None:
+            requirement_params['data_rate'] = data_rate
+
+        # 添加其他传入的kwargs参数
+        requirement_params.update(kwargs)
+
+        # 创建增强型的业务需求
+        requirement = EnhancedTrafficRequirement(**requirement_params)
+
+        # 如果有额外参数，将它们作为属性添加到requirement对象
+        if extra_params:
+            for key, value in extra_params.items():
+                setattr(requirement, key, value)
+
 
         # 设置源和目标无人机引用
         requirement.src_drone = self.simulator.drones[source_id]
         requirement.dst_drone = self.simulator.drones[dest_id]
         requirement.creation_time = self.env.now
-        try:
-            # 尝试使用compute_path方法
-            requirement.routing_path = self.simulator.drones[source_id].routing_protocol.compute_path(
-                requirement.source_id,
-                requirement.dest_id,
-                0  # 选项参数
-            )
-        except AttributeError:
-            # 如果路由协议没有compute_path方法，尝试使用dijkstra
-            logging.warning(
-                f"路由协议 {type(self.simulator.drones[source_id].routing_protocol).__name__} 不支持compute_path方法，使用dijkstra")
-            try:
-                requirement.routing_path = self.simulator.drones[source_id].routing_protocol.dijkstra(
-                    self.simulator.drones[source_id].routing_protocol.calculate_cost_matrix(),
-                    requirement.source_id,
-                    requirement.dest_id,
-                    0
-                )
-            except Exception as e:
-                logging.error(f"计算路由路径失败: {str(e)}")
-                requirement.routing_path = []  # 设置为空路径
+
+        # 使用源节点的路由协议计算路径
+        source_drone = self.simulator.drones[source_id]
+        has_route, requirement, _ = source_drone.routing_protocol.next_hop_selection(requirement)
+
+        if has_route:
+            # 有路由，提交业务需求
+            self.simulator.traffic_generator.submit_traffic_requirement(requirement)
+            logging.info(f"业务需求已提交，将使用路由路径: {requirement.routing_path}")
+            # 确保路由路径包含源节点
+            if requirement.routing_path:
+                # 如果路径不为空但不包含源节点，在开头添加源节点
+                if requirement.routing_path[0] != source_id:
+                    requirement.routing_path.insert(0, source_id)
+                    logging.info(f"在路径开头添加了源节点 {source_id}")
+        else:
+            logging.warning(f"未找到从 {source_id} 到 {dest_id} 的路由路径")
+        # try:
+        #     # 尝试使用compute_path方法
+        #     requirement.routing_path = self.simulator.drones[source_id].routing_protocol.compute_path(
+        #         requirement.source_id,
+        #         requirement.dest_id,
+        #         0  # 选项参数
+        #     )
+        # except AttributeError:
+        #     # 如果路由协议没有compute_path方法，尝试使用dijkstra
+        #     logging.warning(
+        #         f"路由协议 {type(self.simulator.drones[source_id].routing_protocol).__name__} 不支持compute_path方法，使用dijkstra")
+        #     try:
+        #         requirement.routing_path = self.simulator.drones[source_id].routing_protocol.dijkstra(
+        #             self.simulator.drones[source_id].routing_protocol.calculate_cost_matrix(),
+        #             requirement.source_id,
+        #             requirement.dest_id,
+        #             0
+        #         )
+        #     except Exception as e:
+        #         logging.error(f"计算路由路径失败: {str(e)}")
+        #         requirement.routing_path = []  # 设置为空路径
 
         logging.info(
             f"Time {self.env.now}: Drone {self.simulator.drones[source_id].identifier} routing path: {requirement.routing_path}")
-        if len(requirement.routing_path) != 0:
-            requirement.routing_path.pop(0)
+        # if len(requirement.routing_path) != 0:
+        #     requirement.routing_path.pop(0)
         logging.info(f"Time {self.env.now}: Drone {self.simulator.drones[source_id].identifier} routing path: {requirement.routing_path}")
         # 存储需求
         self.requirements[requirement.packet_id] = requirement
 
         logging.info(
-            f"创建业务需求: {source_id}->{dest_id}, 包数: {num_packets}, 延迟要求: {delay_req}ms, QoS: {qos_req}")
+            f"创建业务需求: {source_id}->{dest_id}, 包数: {num_packets}")
 
         return requirement
 
@@ -1197,3 +1315,247 @@ def generate_traffic(self, source_id, dest_id, num_packets, packet_interval=2000
     self.start_traffic_flow(flow_id, immediate=True)
 
     return flow_id
+
+class EnhancedTrafficRequirement(TrafficRequirement):
+    """增强版的流量需求类，可以追踪活跃状态"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_active = True  # 标记该流是否处于活跃状态
+        self.flow_id = f"flow_{self.source_id}_{self.dest_id}"  # 创建唯一的流ID
+        self.creation_timestamp = kwargs.get('simulator').env.now if kwargs.get('simulator') else 0  # 创建时间戳
+
+
+class BatchTrafficManager:
+    """
+    业务层批量请求管理器
+    用于在业务层合并短时间内的多个业务请求
+    """
+
+    def __init__(self, simulator):
+        """
+        初始化批量业务管理器
+
+        Args:
+            simulator: 仿真器实例
+        """
+        self.simulator = simulator
+        self.env = simulator.env
+        self.traffic_generator = simulator.traffic_generator
+
+        # 批处理相关属性
+        self.pending_requirements = []  # 等待处理的业务需求
+        self.batch_interval = 5e5  # 批处理时间间隔(0.5秒)
+        self.last_batch_time = 0  # 上次批处理时间
+        self.is_batch_scheduled = False  # 是否已调度批处理
+        self.batch_count = 0  # 批次计数
+
+        # 启动批处理监控进程
+        self.env.process(self._batch_monitor())
+
+    def create_traffic_requirement(self, source_id, dest_id, num_packets,
+                                   delay_req, qos_req, **kwargs):
+        """
+        创建业务需求并加入批处理队列
+
+        Args:
+            source_id: 源节点ID
+            dest_id: 目标节点ID
+            num_packets: 数据包数量
+            delay_req: 延迟要求(ms)
+            qos_req: QoS要求(0-1)
+            **kwargs: 其他参数
+
+        Returns:
+            requirement: 创建的业务需求对象
+        """
+        # 创建业务需求
+        requirement = self.traffic_generator.create_traffic_requirement(
+            source_id=source_id,
+            dest_id=dest_id,
+            num_packets=num_packets,
+            delay_req=delay_req,
+            qos_req=qos_req,
+            **kwargs
+        )
+
+        # 标记为活跃状态
+        requirement.is_active = True
+        requirement.flow_id = f"flow_{source_id}_{dest_id}"
+
+        # 将需求添加到待处理列表
+        self.pending_requirements.append(requirement)
+
+        logging.info(
+            f"业务需求 {requirement.flow_id} 已创建并加入批处理队列 (当前队列: {len(self.pending_requirements)})")
+
+        # 如果是首个业务需求或已超过批处理间隔，立即处理
+        current_time = self.env.now
+        time_since_last = current_time - self.last_batch_time
+
+        if time_since_last >= self.batch_interval or len(self.pending_requirements) == 1:
+            # 直接处理当前批次
+            self.env.process(self._process_batch())
+        elif not self.is_batch_scheduled:
+            # 调度一个延迟的批处理
+            self.is_batch_scheduled = True
+            remaining_time = self.batch_interval - time_since_last
+            logging.info(f"调度延迟批处理，将在 {remaining_time / 1e6:.3f} 秒后执行")
+            self.env.process(self._delayed_batch_processing(remaining_time))
+
+        return requirement
+
+    def _delayed_batch_processing(self, delay):
+        """延迟执行批处理"""
+        try:
+            yield self.env.timeout(delay)
+            yield self.env.process(self._process_batch())
+        except Exception as e:
+            logging.error(f"延迟批处理出错: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            self.is_batch_scheduled = False
+
+    def _process_batch(self):
+        """处理一批业务需求"""
+        yield self.env.timeout(10)  # 添加这一行使其成为生成器
+        if not self.pending_requirements:
+            logging.info("没有待处理的业务需求")
+            return
+
+        try:
+            # 记录处理开始时间
+            process_start = self.env.now
+
+            # 复制当前待处理列表，然后清空原列表
+            current_batch = self.pending_requirements.copy()
+            self.pending_requirements = []
+            self.batch_count += 1
+
+            batch_id = f"batch_{self.batch_count}_{self.env.now}"
+
+            logging.info(f"开始处理批次 {batch_id}: {len(current_batch)} 个业务需求")
+
+            # 为每个需求计算路由路径
+            for req in current_batch:
+                if not req.routing_path:
+                    try:
+                        # 尝试使用compute_path方法
+                        req.routing_path = self.simulator.drones[req.source_id].routing_protocol.compute_path(
+                            req.source_id,
+                            req.dest_id,
+                            0  # 选项参数
+                        )
+                    except Exception as e:
+                        logging.warning(f"计算路由路径失败: {e}")
+                        # 尝试使用dijkstra
+                        try:
+                            req.routing_path = self.simulator.drones[req.source_id].routing_protocol.dijkstra(
+                                self.simulator.drones[req.source_id].routing_protocol.calculate_cost_matrix(),
+                                req.source_id,
+                                req.dest_id,
+                                0
+                            )
+                        except Exception as e:
+                            logging.error(f"计算路由路径失败: {e}")
+                            req.routing_path = []
+
+                # if req.routing_path and len(req.routing_path) > 0 and req.routing_path[0] == req.source_id:
+                #     req.routing_path = req.routing_path[1:]  # 移除源节点
+
+                logging.info(f"业务 {req.flow_id} 路由路径: {req.routing_path}")
+
+            # 创建批量业务需求
+            batch_requirement = self._create_batch_requirement(current_batch, batch_id)
+
+            # 提交批量业务需求到源节点
+            for req in current_batch:
+                source_drone = self.simulator.drones[req.source_id]
+
+                # 检查队列容量
+                if source_drone.transmitting_queue.qsize() >= source_drone.max_queue_size:
+                    logging.warning(f"源节点 {req.source_id} 队列已满，业务需求 {req.flow_id} 提交失败")
+                    continue
+
+                # 标记为批处理一部分
+                req.batch_id = batch_id
+
+                # 添加到源节点队列
+                source_drone.transmitting_queue.put(req)
+                logging.info(f"业务需求 {req.flow_id} 已提交到源节点 {req.source_id} 队列")
+
+                # 生成实际业务流量
+                flow_id = self.traffic_generator.generate_traffic_for_requirement(req.packet_id)
+                logging.info(f"为业务需求 {req.flow_id} 创建并启动业务流 {flow_id}")
+
+            # 更新最后批处理时间
+            self.last_batch_time = self.env.now
+
+            # 记录处理时间
+            process_duration = self.env.now - process_start
+            logging.info(f"批次 {batch_id} 处理完成，耗时 {process_duration / 1e6:.3f} 秒")
+
+        except Exception as e:
+            logging.error(f"处理业务批次出错: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _create_batch_requirement(self, requirements, batch_id):
+        """
+        创建一个表示整个批次的需求对象
+        用于后续查询和管理
+
+        Args:
+            requirements: 批次中的业务需求列表
+            batch_id: 批次ID
+
+        Returns:
+            BatchRequirement: 批次需求对象
+        """
+        from dataclasses import dataclass, field
+
+        @dataclass
+        class BatchRequirement:
+            batch_id: str
+            requirements: list
+            creation_time: int
+            source_nodes: set = field(default_factory=set)
+            dest_nodes: set = field(default_factory=set)
+            all_nodes: set = field(default_factory=set)
+            all_paths: list = field(default_factory=list)
+
+        # 收集批次信息
+        batch_req = BatchRequirement(
+            batch_id=batch_id,
+            requirements=requirements,
+            creation_time=self.env.now
+        )
+
+        # 收集源节点和目标节点
+        for req in requirements:
+            batch_req.source_nodes.add(req.source_id)
+            batch_req.dest_nodes.add(req.dest_id)
+
+            # 收集路径上的所有节点
+            if req.routing_path:
+                batch_req.all_paths.append(req.routing_path)
+                for node in req.routing_path:
+                    batch_req.all_nodes.add(node)
+
+        # 将所有来源和目标节点添加到节点集合
+        batch_req.all_nodes.update(batch_req.source_nodes)
+        batch_req.all_nodes.update(batch_req.dest_nodes)
+
+        return batch_req
+
+    def _batch_monitor(self):
+        """定期检查是否有未处理的批次"""
+
+        while True:
+            yield self.env.timeout(self.batch_interval)
+
+            if self.pending_requirements and not self.is_batch_scheduled:
+                # 如果有未处理的需求且没有调度批处理，启动处理
+                logging.info(f"批处理监控检测到 {len(self.pending_requirements)} 个未处理需求")
+                self.env.process(self._process_batch())

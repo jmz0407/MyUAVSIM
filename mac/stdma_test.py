@@ -110,47 +110,45 @@ class Stdma_Test:
         """提供给强化学习算法的时隙更新接口"""
         self.slot_schedule = new_schedule
         logging.info(f"Updated slot schedule: {self.slot_schedule}")
+
     def _initialize_rl_controller(self):
-            """初始化强化学习控制器"""
-            try:
-                from stable_baselines3 import DQN
-                import os
+        """初始化强化学习控制器"""
+        try:
+            from stable_baselines3 import DQN
+            import os
 
-                # 构建模型路径
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                model_dir = os.path.join(current_dir, "rl_controller/logs/STDMA_20250131_161759/")
-                model_path = os.path.join(model_dir, "final_model.zip")
+            # 构建模型路径
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            model_dir = os.path.join(current_dir, "rl_controller/logs/STDMA_20250131_161759/")
+            model_path = os.path.join(model_dir, "final_model.zip")
 
-                # 调试信息
-                logging.info(f"尝试加载RL模型路径: {model_path}")
-                logging.info(f"模型文件是否存在: {os.path.exists(model_path)}")
+            # 调试信息
+            logging.info(f"尝试加载RL模型路径: {model_path}")
+            logging.info(f"模型文件是否存在: {os.path.exists(model_path)}")
 
-                # 加载模型
-                if os.path.exists(model_path):
-                    rl_model = DQN.load(model_path)
-                    use_rl = True
-                    logging.info(f"成功加载RL模型: {model_path}")
+            # 加载模型
+            if os.path.exists(model_path):
+                rl_model = DQN.load(model_path)
+                use_rl = True
+                logging.info(f"成功加载RL模型: {model_path}")
 
-                    # 创建RL环境
-                    from mac.rl_controller.rl_environment import StdmaEnv
-                    from mac.rl_controller.DQN_rl_controller import StdmaFeatureExtractor  # 引入特征提取器
-                    feature_extractor = StdmaFeatureExtractor(observation_space=None, features_dim=256,)  # 设置特征维度
-                    rl_env = StdmaEnv(
-                        simulator=self.simulator,
-                        num_nodes=self.my_drone.simulator.n_drones,
-                        num_slots=self.num_slots,
-                        feature_extractor=feature_extractor  # 传入特征提取器
-                    )
+                # 创建RL环境
+                from mac.rl_controller.rl_environment import StdmaEnv
+                rl_env = StdmaEnv(
+                    simulator=self.simulator,
+                    num_nodes=self.my_drone.simulator.n_drones,
+                    num_slots=self.num_slots
+                )
 
-                    return use_rl, rl_model, rl_env
-                else:
-                    logging.warning("未找到RL模型文件")
-                    return False, None, None
-
-            except Exception as e:
-                logging.error(f"初始化RL控制器失败: {str(e)}")
-                traceback.print_exc()
+                return use_rl, rl_model, rl_env
+            else:
+                logging.warning("未找到RL模型文件")
                 return False, None, None
+
+        except Exception as e:
+            logging.error(f"初始化RL控制器失败: {str(e)}")
+            traceback.print_exc()
+            return False, None, None
     def get_network_state(self):
         """获取当前网络状态，供强化学习使用"""
         state = {

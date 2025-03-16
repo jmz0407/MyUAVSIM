@@ -1,0 +1,1653 @@
+
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>MAC协议性能测试报告</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        margin: 0;
+                        padding: 20px;
+                        color: #333;
+                    }
+                    h1, h2, h3 {
+                        color: #2c3e50;
+                    }
+                    table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    }
+                    th, td {
+                        text-align: left;
+                        padding: 12px;
+                        border-bottom: 1px solid #ddd;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                    }
+                    tr:hover {
+                        background-color: #f5f5f5;
+                    }
+                    .chart-container {
+                        display: flex;
+                        flex-wrap: wrap;
+                        justify-content: space-around;
+                        margin: 20px 0;
+                    }
+                    .chart {
+                        margin: 10px;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    }
+                    .highlight {
+                        font-weight: bold;
+                        color: #1a73e8;
+                    }
+                    .summary-card {
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-bottom: 20px;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    }
+                    .recommendation {
+                        background-color: #e8f5e9;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-top: 20px;
+                    }
+                    .traffic-section {
+                        margin-top: 30px;
+                        border-top: 1px solid #ddd;
+                        padding-top: 20px;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>MAC协议性能测试报告</h1>
+                <p>生成时间: 2025-03-17 22:40:24</p>
+
+                <div class="summary-card">
+                    <h2>测试概览</h2>
+                    <p>本报告比较了以下MAC协议在无人机网络中的性能表现：</p>
+                    <ul>
+                        <li>BasicSTDMA</li><li>MutiSTDMA</li><li>STDMA</li><li>TraTDMA</li>
+                    </ul>
+                    <p>测试条件：</p>
+                    <ul>
+                        <li>无人机数量: 10, 15, 20, 25, 30</li>
+                        <li>业务模式: BURST, CBR, PERIODIC, POISSON, VBR</li>
+                        <li>仿真时间: 5 秒</li>
+                    </ul>
+                </div>
+
+                <h2>性能结果摘要</h2>
+            
+                <table>
+                    <tr>
+                        <th>协议</th>
+                        <th>平均端到端延迟 (ms)</th>
+                        <th>平均数据包投递率 (%)</th>
+                        <th>平均吞吐量 (kbps)</th>
+                        <th>平均MAC延迟 (ms)</th>
+                        <th>平均能量消耗 (J)</th>
+                        <th>平均碰撞次数</th>
+                    </tr>
+            
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>55.77</td>
+                        <td>100.00</td>
+                        <td>1387.25</td>
+                        <td>1.79</td>
+                        <td>9423.65</td>
+                        <td>0</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>1.16</td>
+                        <td>100.00</td>
+                        <td>7998.56</td>
+                        <td>0.33</td>
+                        <td>9423.65</td>
+                        <td>0</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>1.06</td>
+                        <td>100.00</td>
+                        <td>8520.89</td>
+                        <td>0.30</td>
+                        <td>9423.65</td>
+                        <td>0</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>57.28</td>
+                        <td>100.00</td>
+                        <td>1314.15</td>
+                        <td>2.07</td>
+                        <td>9423.64</td>
+                        <td>0</td>
+                    </tr>
+                </table>
+                <h2>性能对比图表</h2>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>端到端延迟对比</h3>
+                        <img src="e2e_delay_vs_drones.png" alt="端到端延迟对比" width="400">
+                    </div>
+                    <div class="chart">
+                        <h3>数据包投递率对比</h3>
+                        <img src="pdr_vs_drones.png" alt="数据包投递率对比" width="400">
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>吞吐量对比</h3>
+                        <img src="throughput_vs_drones.png" alt="吞吐量对比" width="400">
+                    </div>
+                    <div class="chart">
+                        <h3>MAC层延迟对比</h3>
+                        <img src="mac_delay_vs_drones.png" alt="MAC层延迟对比" width="400">
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>能量消耗对比</h3>
+                        <img src="energy_vs_drones.png" alt="能量消耗对比" width="400">
+                    </div>
+                    <div class="chart">
+                        <h3>碰撞次数对比</h3>
+                        <img src="collisions_vs_drones.png" alt="碰撞次数对比" width="400">
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>协议综合性能雷达图</h3>
+                        <img src="protocol_radar_comparison.png" alt="协议综合性能雷达图" width="600">
+                    </div>
+                </div>
+            
+                    <div class="traffic-section">
+                        <h2>不同业务模式下的性能比较</h2>
+
+                        <div class="chart-container">
+                            <div class="chart">
+                                <h3>不同业务流下的端到端延迟</h3>
+                                <img src="e2e_delay_ms_vs_traffic.png" alt="不同业务流下的端到端延迟" width="500">
+                            </div>
+                            <div class="chart">
+                                <h3>不同业务流下的数据包投递率</h3>
+                                <img src="pdr_percent_vs_traffic.png" alt="不同业务流下的数据包投递率" width="500">
+                            </div>
+                        </div>
+
+                        <div class="chart-container">
+                            <div class="chart">
+                                <h3>不同业务流下的吞吐量</h3>
+                                <img src="throughput_kbps_vs_traffic.png" alt="不同业务流下的吞吐量" width="500">
+                            </div>
+                        </div>
+                    </div>
+                
+                <h2>分析与结论</h2>
+
+                <div class="summary-card">
+                    <h3>综合表现评估</h3>
+                    <p>经过综合评分，<span class="highlight">STDMA</span> 协议在测试场景中整体表现最佳。</p>
+
+                    <h3>各指标最佳表现</h3>
+                    <ul>
+                        <li>最高数据包投递率: <span class="highlight">BasicSTDMA</span></li>
+                        <li>最高吞吐量: <span class="highlight">STDMA</span></li>
+                        <li>最低端到端延迟: <span class="highlight">STDMA</span></li>
+                        <li>最低MAC层延迟: <span class="highlight">STDMA</span></li>
+                        <li>最低能量消耗: <span class="highlight">TraTDMA</span></li>
+                        <li>最少碰撞次数: <span class="highlight">BasicSTDMA</span></li>
+                    </ul>
+                </div>
+
+                <div class="recommendation">
+                    <h3>协议选择建议</h3>
+                    <p>基于测试结果，我们建议:</p>
+                    <ul>
+            <li>对于小规模网络 (10架无人机): 建议使用 <span class="highlight">STDMA</span></li><li>对于中等规模网络 (15架无人机): 建议使用 <span class="highlight">STDMA</span></li><li>对于中等规模网络 (20架无人机): 建议使用 <span class="highlight">STDMA</span></li><li>对于大规模网络 (25架无人机): 建议使用 <span class="highlight">MutiSTDMA</span></li><li>对于大规模网络 (30架无人机): 建议使用 <span class="highlight">MutiSTDMA</span></li><li>不同业务模式建议:</li><ul><li>对于BURST业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于CBR业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于PERIODIC业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于POISSON业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于VBR业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li></ul>
+                    </ul>
+                </div>
+
+                <h2>详细测试数据</h2>
+            
+                <table>
+                    <tr>
+                        <th>协议</th>
+                        <th>无人机数量</th>
+                        <th>业务模式</th>
+                        <th>业务流数量</th>
+                        <th>端到端延迟 (ms)</th>
+                        <th>数据包投递率 (%)</th>
+                        <th>吞吐量 (kbps)</th>
+                        <th>跳数</th>
+                        <th>MAC延迟 (ms)</th>
+                        <th>碰撞次数</th>
+                        <th>平均能耗 (J)</th>
+                    </tr>
+            
+                    <tr>
+                        <td>STDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8126.40</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8126.40</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8121.93</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8106.11</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8086.48</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>15</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5600.38</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>15</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5600.38</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>15</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5596.29</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>15</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5582.88</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>15</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5604.82</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>20</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>20</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>20</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9643.00</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>20</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9658.53</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>20</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9629.63</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>25</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>25</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>25</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9636.23</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>25</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9623.68</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>25</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9591.87</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>30</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>30</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>30</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9629.73</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>30</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9586.84</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>STDMA</td>
+                        <td>30</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9546.17</td>
+                        <td>3.00</td>
+                        <td>0.30</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5573.94</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5573.94</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>1.56</td>
+                        <td>100.00</td>
+                        <td>5567.10</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5590.22</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>1.56</td>
+                        <td>100.00</td>
+                        <td>5569.51</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>15</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5579.71</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>15</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5579.71</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>15</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5572.95</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>15</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5588.52</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>15</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5584.39</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>20</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9576.00</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>20</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9576.00</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>20</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9556.28</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>20</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9658.41</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>20</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9586.37</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>25</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>25</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>25</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9636.23</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>25</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9623.68</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>25</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9591.87</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>30</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>30</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9654.10</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>30</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>0.90</td>
+                        <td>100.00</td>
+                        <td>9629.73</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>30</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9586.84</td>
+                        <td>3.00</td>
+                        <td>0.29</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>MutiSTDMA</td>
+                        <td>30</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>0.91</td>
+                        <td>100.00</td>
+                        <td>9546.17</td>
+                        <td>3.00</td>
+                        <td>0.30</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>3.74</td>
+                        <td>100.00</td>
+                        <td>2353.00</td>
+                        <td>4.00</td>
+                        <td>0.93</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>3.74</td>
+                        <td>100.00</td>
+                        <td>2353.00</td>
+                        <td>4.00</td>
+                        <td>0.93</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>6.59</td>
+                        <td>100.00</td>
+                        <td>1434.89</td>
+                        <td>4.00</td>
+                        <td>1.07</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>3.75</td>
+                        <td>100.00</td>
+                        <td>2352.32</td>
+                        <td>4.00</td>
+                        <td>0.93</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>67.02</td>
+                        <td>100.00</td>
+                        <td>238.62</td>
+                        <td>4.00</td>
+                        <td>1.09</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>15</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>6.08</td>
+                        <td>100.00</td>
+                        <td>1442.67</td>
+                        <td>4.00</td>
+                        <td>1.51</td>
+                        <td>0</td>
+                        <td>9423.83</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>15</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>6.08</td>
+                        <td>100.00</td>
+                        <td>1442.67</td>
+                        <td>4.00</td>
+                        <td>1.51</td>
+                        <td>0</td>
+                        <td>9423.83</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>15</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>12.50</td>
+                        <td>100.00</td>
+                        <td>790.38</td>
+                        <td>4.00</td>
+                        <td>1.74</td>
+                        <td>0</td>
+                        <td>9423.83</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>15</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>6.17</td>
+                        <td>100.00</td>
+                        <td>1420.13</td>
+                        <td>4.00</td>
+                        <td>1.53</td>
+                        <td>0</td>
+                        <td>9423.83</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>15</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>147.72</td>
+                        <td>100.00</td>
+                        <td>126.00</td>
+                        <td>4.00</td>
+                        <td>1.77</td>
+                        <td>0</td>
+                        <td>9423.83</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>20</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>2.53</td>
+                        <td>100.00</td>
+                        <td>4026.96</td>
+                        <td>3.00</td>
+                        <td>0.84</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>20</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>2.53</td>
+                        <td>100.00</td>
+                        <td>4026.96</td>
+                        <td>3.00</td>
+                        <td>0.84</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>20</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>12.83</td>
+                        <td>100.00</td>
+                        <td>1078.86</td>
+                        <td>3.00</td>
+                        <td>1.30</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>20</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>2.55</td>
+                        <td>100.00</td>
+                        <td>4023.77</td>
+                        <td>3.00</td>
+                        <td>0.84</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>20</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>226.36</td>
+                        <td>100.00</td>
+                        <td>107.97</td>
+                        <td>3.00</td>
+                        <td>1.34</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>25</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>7.89</td>
+                        <td>100.00</td>
+                        <td>1122.15</td>
+                        <td>3.00</td>
+                        <td>2.62</td>
+                        <td>0</td>
+                        <td>9423.36</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>25</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>7.89</td>
+                        <td>100.00</td>
+                        <td>1122.15</td>
+                        <td>3.00</td>
+                        <td>2.62</td>
+                        <td>0</td>
+                        <td>9423.36</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>25</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>21.66</td>
+                        <td>100.00</td>
+                        <td>498.70</td>
+                        <td>3.00</td>
+                        <td>3.17</td>
+                        <td>0</td>
+                        <td>9423.36</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>25</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>7.86</td>
+                        <td>100.00</td>
+                        <td>1126.09</td>
+                        <td>3.00</td>
+                        <td>2.61</td>
+                        <td>0</td>
+                        <td>9423.36</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>25</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>313.56</td>
+                        <td>100.00</td>
+                        <td>61.66</td>
+                        <td>3.00</td>
+                        <td>3.23</td>
+                        <td>0</td>
+                        <td>9423.36</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>30</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>64.79</td>
+                        <td>100.00</td>
+                        <td>188.78</td>
+                        <td>3.00</td>
+                        <td>4.04</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>30</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>64.79</td>
+                        <td>100.00</td>
+                        <td>188.78</td>
+                        <td>3.00</td>
+                        <td>4.04</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>30</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>27.41</td>
+                        <td>100.00</td>
+                        <td>394.00</td>
+                        <td>3.00</td>
+                        <td>3.97</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>30</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>9.98</td>
+                        <td>100.00</td>
+                        <td>884.24</td>
+                        <td>3.00</td>
+                        <td>3.32</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>30</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>395.96</td>
+                        <td>100.00</td>
+                        <td>48.98</td>
+                        <td>3.00</td>
+                        <td>4.04</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>2.44</td>
+                        <td>100.00</td>
+                        <td>3686.01</td>
+                        <td>4.00</td>
+                        <td>0.60</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>2.44</td>
+                        <td>100.00</td>
+                        <td>3686.01</td>
+                        <td>4.00</td>
+                        <td>0.60</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>5.22</td>
+                        <td>100.00</td>
+                        <td>1938.38</td>
+                        <td>4.00</td>
+                        <td>0.78</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>2.46</td>
+                        <td>100.00</td>
+                        <td>3679.22</td>
+                        <td>4.00</td>
+                        <td>0.61</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>65.89</td>
+                        <td>100.00</td>
+                        <td>260.74</td>
+                        <td>4.00</td>
+                        <td>0.80</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>15</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>3.97</td>
+                        <td>100.00</td>
+                        <td>2253.43</td>
+                        <td>4.00</td>
+                        <td>0.98</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>15</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>3.97</td>
+                        <td>100.00</td>
+                        <td>2253.43</td>
+                        <td>4.00</td>
+                        <td>0.98</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>15</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>10.32</td>
+                        <td>100.00</td>
+                        <td>1042.57</td>
+                        <td>4.00</td>
+                        <td>1.25</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>15</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>3.91</td>
+                        <td>100.00</td>
+                        <td>2294.02</td>
+                        <td>4.00</td>
+                        <td>0.97</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>15</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>146.75</td>
+                        <td>100.00</td>
+                        <td>133.16</td>
+                        <td>4.00</td>
+                        <td>1.29</td>
+                        <td>0</td>
+                        <td>9423.84</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>20</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>5.11</td>
+                        <td>100.00</td>
+                        <td>1754.82</td>
+                        <td>3.00</td>
+                        <td>1.69</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>20</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>5.11</td>
+                        <td>100.00</td>
+                        <td>1754.82</td>
+                        <td>3.00</td>
+                        <td>1.69</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>20</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>15.26</td>
+                        <td>100.00</td>
+                        <td>730.46</td>
+                        <td>3.00</td>
+                        <td>2.20</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>20</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>5.14</td>
+                        <td>100.00</td>
+                        <td>1746.11</td>
+                        <td>3.00</td>
+                        <td>1.70</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>20</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>228.95</td>
+                        <td>100.00</td>
+                        <td>90.10</td>
+                        <td>3.00</td>
+                        <td>2.26</td>
+                        <td>0</td>
+                        <td>9423.46</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>25</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>6.10</td>
+                        <td>100.00</td>
+                        <td>1474.57</td>
+                        <td>3.00</td>
+                        <td>2.03</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>25</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>6.10</td>
+                        <td>100.00</td>
+                        <td>1474.57</td>
+                        <td>3.00</td>
+                        <td>2.03</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>25</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>19.84</td>
+                        <td>100.00</td>
+                        <td>581.75</td>
+                        <td>3.00</td>
+                        <td>2.62</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>25</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>6.04</td>
+                        <td>100.00</td>
+                        <td>1489.59</td>
+                        <td>3.00</td>
+                        <td>2.01</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>25</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>308.70</td>
+                        <td>100.00</td>
+                        <td>74.64</td>
+                        <td>3.00</td>
+                        <td>2.68</td>
+                        <td>0</td>
+                        <td>9423.37</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>30</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>59.29</td>
+                        <td>100.00</td>
+                        <td>237.27</td>
+                        <td>3.00</td>
+                        <td>3.16</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>30</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>59.29</td>
+                        <td>100.00</td>
+                        <td>237.27</td>
+                        <td>3.00</td>
+                        <td>3.16</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>30</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>24.34</td>
+                        <td>100.00</td>
+                        <td>486.81</td>
+                        <td>3.00</td>
+                        <td>3.09</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>30</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>7.15</td>
+                        <td>100.00</td>
+                        <td>1263.82</td>
+                        <td>3.00</td>
+                        <td>2.37</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>30</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>390.45</td>
+                        <td>100.00</td>
+                        <td>57.75</td>
+                        <td>3.00</td>
+                        <td>3.17</td>
+                        <td>0</td>
+                        <td>9423.30</td>
+                    </tr>
+                
+                </table>
+
+                <footer>
+                    <p>注: 本报告通过自动化测试生成，实际部署时应考虑具体应用场景进行最终决策。</p>
+                </footer>
+            </body>
+            </html>
+            

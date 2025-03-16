@@ -4,7 +4,7 @@ from utils import config
 from utils.util_function import euclidean_distance
 from entities.packet import DataPacket
 from routing.mp_dsr.dsr import GlobalDSR
-
+from simulator.improved_traffic_generator import TrafficRequirement
 
 class GlobalMPDSR(GlobalDSR):
     """
@@ -48,7 +48,7 @@ class GlobalMPDSR(GlobalDSR):
         enquire = False
 
         # For non-data packets, forward as is
-        if not isinstance(packet, DataPacket):
+        if not (isinstance(packet, DataPacket) or isinstance(packet, TrafficRequirement)) :
             return True, packet, False
 
         # For data packets, find a route to the destination

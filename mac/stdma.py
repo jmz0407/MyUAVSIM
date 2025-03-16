@@ -8,7 +8,24 @@ from mac.LinkQualityManager import LinkQualityManager
 from mac.LoadBalancer import LoadBalancer
 from simulator.improved_traffic_generator import TrafficRequirement
 import traceback
-import copy
+from mac.GNN_RL.dynamic_env import DynamicStdmaEnv  # 使用动态环境
+from mac.GNN_RL.gnn_model import DynamicGNNFeatureExtractor  # 导入GNN模型
+# 在 stdma.py 开头添加
+import sys
+import os
+
+# 添加路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# 确保 GNN_RL 目录可导入
+gnn_rl_dir = os.path.join(current_dir, "GNN_RL")
+if gnn_rl_dir not in sys.path:
+    sys.path.insert(0, gnn_rl_dir)
 class Stdma:
     def __init__(self, drone):
         self.my_drone = drone
@@ -99,11 +116,12 @@ class Stdma:
         self.env.process(self._slot_synchronization())
         # self.env.process(self._delayed_schedule_creation())
         # self.env.process(self._monitor_flows())
+
     def _create_tra_slot_schedule(self):
         """创建时隙分配表"""
         schedule = {}
         for i in range(self.num_slots):
-            schedule[i] = i % self.num_slots
+            schedule[i] = [i % self.num_slots]  # 将整数值改为列表
         logging.info(f"TDMA schedule created for drone {self.my_drone.identifier}: {schedule}")
         return schedule
 
@@ -112,46 +130,112 @@ class Stdma:
         self.slot_schedule = new_schedule
         logging.info(f"Updated slot schedule: {self.slot_schedule}")
 
-    # 在stdma.py中需要修改的部分
     def _initialize_ppo_rl_controller(self):
         """初始化PPO控制器"""
         try:
+            # 尝试导入所需模块
+            try:
+                import gnn_model
+            except ImportError:
+                print("无法导入 gnn_model，尝试从文件动态导入")
+                # 尝试动态导入
+                import importlib.util
+                gnn_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GNN_RL/gnn_model.py")
+                spec = importlib.util.spec_from_file_location("gnn_model", gnn_path)
+                gnn_model = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(gnn_model)
+                sys.modules["gnn_model"] = gnn_model
+                print(f"已动态加载 gnn_model 从 {gnn_path}")
+
             from stable_baselines3 import PPO
-            import os
 
             # 构建模型路径
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            # model_dir = os.path.join(current_dir, "rl_controller/logs/")
-            # # 找到最新的模型目录
-            # model_dirs = [d for d in os.listdir(model_dir) if d.startswith("STDMA_PPO_")]
-            # if not model_dirs:
-            #     return False, None, None
-            #
-            # latest_model_dir = max(model_dirs)
-            # model_path = os.path.join(model_dir, latest_model_dir, "best_model/best_model.zip")
-            # 构建模型路径
-            model_dir = os.path.join(current_dir, "rl_controller/logs/STDMA_PPO_20250207_112404/best_model")
-            model_path = os.path.join(model_dir, "best_model.zip")
+            model_dir = os.path.join(current_dir, "GNN_RL/models/gnn_stdma_20250316_224023/")
+            model_path = os.path.join(model_dir, "final_model.zip")
 
             if os.path.exists(model_path):
+                # 先加载模型
                 rl_model = PPO.load(model_path)
-                use_rl = True
-                logging.info(f"成功加载PPO模型: {model_path}")
-                # 创建RL环境
-                from mac.rl_controller.rl_environment import StdmaEnv
-                rl_env = StdmaEnv(
+
+                # 加载成功后再创建环境
+                logging.info("模型加载成功，初始化环境...")
+
+                # 创建虚拟业务需求以帮助初始化
+                from dataclasses import dataclass
+
+                @dataclass
+                class DummyRequirement:
+                    source_id: int = 0
+                    dest_id: int = 0
+                    routing_path: list = None
+                    delay_requirement: float = 100.0
+                    num_packets: int = 50
+                    qos_requirement: int = 1
+
+                # 创建环境但不立即重置
+                from mac.GNN_RL.dynamic_env import DynamicStdmaEnv
+                rl_env = DynamicStdmaEnv(
                     simulator=self.simulator,
                     num_nodes=self.my_drone.simulator.n_drones,
-                    num_slots=self.num_slots
+                    max_nodes=max(30, self.my_drone.simulator.n_drones)
                 )
+
+                # 手动初始化current_requirement
+                rl_env.current_requirement = DummyRequirement()
+
+                # 成功初始化
+                use_rl = True
+                logging.info(f"成功加载PPO模型和环境")
 
                 return use_rl, rl_model, rl_env
             else:
+                logging.warning(f"模型文件不存在: {model_path}")
                 return False, None, None
 
         except Exception as e:
             logging.error(f"初始化PPO控制器失败: {str(e)}")
+            traceback.print_exc()
             return False, None, None
+
+    # def _initialize_ppo_rl_controller(self):
+    #     """初始化PPO控制器"""
+    #     try:
+    #         from stable_baselines3 import PPO
+    #         import os
+    #
+    #         # 构建模型路径
+    #         current_dir = os.path.dirname(os.path.abspath(__file__))
+    #         # model_dir = os.path.join(current_dir, "rl_controller/logs/")
+    #         # # 找到最新的模型目录
+    #         # model_dirs = [d for d in os.listdir(model_dir) if d.startswith("STDMA_PPO_")]
+    #         # if not model_dirs:
+    #         #     return False, None, None
+    #         #
+    #         # latest_model_dir = max(model_dirs)
+    #         # model_path = os.path.join(model_dir, latest_model_dir, "best_model/best_model.zip")
+    #         # 构建模型路径
+    #         model_dir = os.path.join(current_dir, "rl_controller/logs/STDMA_PPO_20250207_112404/best_model")
+    #         model_path = os.path.join(model_dir, "best_model.zip")
+    #         if os.path.exists(model_path):
+    #             rl_model = PPO.load(model_path)
+    #             use_rl = True
+    #             logging.info(f"成功加载PPO模型: {model_path}")
+    #             # 创建RL环境
+    #             from mac.rl_controller.rl_environment import StdmaEnv
+    #             rl_env = StdmaEnv(
+    #                 simulator=self.simulator,
+    #                 num_nodes=self.my_drone.simulator.n_drones,
+    #                 num_slots=self.num_slots
+    #             )
+    #
+    #             return use_rl, rl_model, rl_env
+    #         else:
+    #             return False, None, None
+    #
+    #     except Exception as e:
+    #         logging.error(f"初始化PPO控制器失败: {str(e)}")
+    #         return False, None, None
     def _initialize_rl_controller(self):
             """初始化强化学习控制器"""
             try:
@@ -595,7 +679,7 @@ class Stdma:
         logging.info(f"Time {self.env.now}:UAV{self.my_drone.identifier} MAC layer received {type(packet).__name__}")
 
         if isinstance(packet, TrafficRequirement):
-            logging.info(f"当前时隙表: {self.slot_schedule}")
+            # logging.info(f"当前时隙表: {self.slot_schedule}")
 
             # 准备所需信息
             traffic_info = {
@@ -617,18 +701,16 @@ class Stdma:
                     #记录当前的业务路径
                     logging.info(f"UAV{self.my_drone.identifier} 业务路径: {packet.routing_path}")
                     new_schedule = {}
-
-                    for node in range(self.simulator.n_drones):
+                    done = False
+                    while not done:
                         action, _ = self.rl_model.predict(obs, deterministic=True)
                         slot = int(action)
                         if slot not in new_schedule:
                             new_schedule[slot] = []
-                        # new_schedule[slot].append(node)
 
                         obs, _, done, _, info = self.rl_env.step(action)
                         new_schedule = info.get('schedule', {})
-                        if done:
-                            break
+
 
                     # 更新时隙分配
                     self.slot_schedule = new_schedule
@@ -640,7 +722,10 @@ class Stdma:
                     # 使用传统方法重新分配时隙
                     self.slot_schedule = self._create_tra_slot_schedule()
                     logging.info("使用传统方法更新时隙分配")
-
+            except Exception as e:
+                import traceback
+                logging.error(f"时隙调整失败: {e}")
+                logging.error(f"错误详情: {traceback.format_exc()}")
             except Exception as e:
                 logging.error(f"时隙调整失败: {e}")
                 # 如果调整失败，保持当前时隙分配不变

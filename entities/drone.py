@@ -9,7 +9,6 @@ from routing.AMLBR.adaptive_multipath.AMLBR import AMLBR
 from routing.AMLBR.manager.routing_manager import RoutingManager
 from routing.AMLBR.manager.gat_enhanced_routing_manager import GATEnhancedRoutingManager
 from routing.AMLBR.adaptive_multipath.MP_AMLBR import MP_AMLBR
-# from mac.self_tdma import Stdma
 import simpy
 import logging
 import numpy as np
@@ -18,11 +17,14 @@ import math
 import queue
 from entities.packet import DataPacket
 from routing.mp_olsr.olsr import OlsrHelloPacket,OlsrTcPacket
+from routing.SimpleDijkstraRouting import SimpleDijkstraRouting
 from routing.mp_olsr.direct_olsr import DirectOlsr
 from routing.dsdv.dsdv import Dsdv
 from routing.gpsr.gpsr import Gpsr
 from routing.grad.grad import Grad
 from routing.opar.opar import Opar
+from routing.opar.LBOpar import LbOpar
+from routing.opar.originOpar import OriginalOpar
 from routing.mp_dsr.dsr import GlobalDSR
 from routing.mp_dsr.mp_dsr import GlobalMPDSR
 from routing.multipath.amlb_opar import AMLB_OPAR
@@ -34,8 +36,12 @@ from routing.q_routing.q_routing import QRouting
 from routing.mp_olsr.olsr import Olsr
 from mac.csma_ca import CsmaCa
 from mac.reuse_slot_tdma import Tdma
+from mac.BasicStdma import BasicStdma
+from mac.GraphColoringStdma import GraphColoringStdma
 # from mac.self_tdma import Stdma
 from mac.stdma import Stdma
+from mac.muti_stdma import MutiStdma
+from mac.DQN_stdma import DQN_Stdma
 from mac.FPRP import FPRP
 from mac.pure_aloha import PureAloha
 from mobility.gauss_markov_3d import GaussMarkov3D
@@ -204,9 +210,13 @@ class Drone:
 
         # self.mac_protocol = CsmaCa(self)
         # self.mac_protocol = Tdma(self)  # Use TDMA protocol instead of CSMA/CA
+        # self.mac_protocol = MutiStdma(self)
+        # self.mac_protocol = BasicStdma(self)
+        # self.mac_protocol = GraphColoringStdma(self)
         self.mac_protocol = Stdma(self)
         # self.mac_protocol = Stdma_Test(self)
         # self.mac_protocol = FPRP(self)
+        # self.mac_protocol = DQN_Stdma(self)
         # self.mac_protocol = Tra_Tdma(self)
         self.mac_process_dict = dict()
         self.mac_process_finish = dict()
@@ -216,10 +226,12 @@ class Drone:
 
 
         # self.routing_protocol = Opar(self.simulator, self)
+        # self.routing_protocol = LbOpar(self.simulator, self)
+        # self.routing_protocol = OriginalOpar(self.simulator, self)
         # self.routing_protocol = MP_GAT_OPAR(simulator, self)
         # self.routing_protocol = LastOpar(self.simulator, self)
         # self.routing_protocol = AMLB_OPAR(self.simulator, self)
-        self.routing_protocol = AMLBR(self.simulator, self)
+        # self.routing_protocol = AMLBR(self.simulator, self)
         # self.routing_protocol = RoutingManager(self.simulator, self)
         # self.routing_protocol = GATEnhancedRoutingManager(self.simulator, self)
         # self.routing_protocol = MP_AMLBR(self.simulator, self)
@@ -231,6 +243,7 @@ class Drone:
         # self.routing_protocol = DirectOlsr(self.simulator, self)
         # self.routing_protocol = GlobalDSR(self.simulator, self)
         # self.routing_protocol = GlobalMPDSR(self.simulator, self)
+        self.routing_protocol = SimpleDijkstraRouting(self.simulator, self)
         self.mobility_model = RandomWalk3D(self)
         self.mobility_model = GaussMarkov3D(self)
         self.motion_controller = VfMotionController(self)
@@ -500,32 +513,48 @@ class Drone:
                         logging.info(f"Time {self.env.now}: Drone {self.identifier} got {type(packet).__name__}")
                         if isinstance(packet, TrafficRequirement):
                             logging.info(f"Time {self.env.now}: Drone {self.identifier} processing TrafficRequirement")
-                            try:
-                                # 尝试使用compute_path方法
-                                packet.routing_path = self.routing_protocol.compute_path(
-                                    packet.source_id,
-                                    packet.dest_id,
-                                    0  # 选项参数
-                                )
-                            except AttributeError:
-                                # 如果路由协议没有compute_path方法，尝试使用dijkstra
-                                logging.warning(
-                                    f"路由协议 {type(self.routing_protocol).__name__} 不支持compute_path方法，使用dijkstra")
-                                try:
-                                    packet.routing_path = self.routing_protocol.dijkstra(
-                                        self.routing_protocol.calculate_cost_matrix(),
-                                        packet.source_id,
-                                        packet.dest_id,
-                                        0
-                                    )
-                                except Exception as e:
-                                    logging.error(f"计算路由路径失败: {str(e)}")
-                                    packet.routing_path = []  # 设置为空路径
+
+                            # # 使用源节点的路由协议计算路径
+                            # source_drone = self.identifier
+                            # has_route, requirement, _ = source_drone.routing_protocol.next_hop_selection(requirement)
+                            #
+                            # if has_route:
+                            #     # 有路由，提交业务需求
+                            #     logging.info(f"业务需求已提交，将使用路由路径: {requirement.routing_path}")
+                            #     # 确保路由路径包含源节点
+                            #     if requirement.routing_path:
+                            #         # 如果路径不为空但不包含源节点，在开头添加源节点
+                            #         if requirement.routing_path[0] != self.identifier:
+                            #             requirement.routing_path.insert(0, self.identifier)
+                            #             logging.info(f"在路径开头添加了源节点 {self.identifier}")
+                            # else:
+                            #     logging.warning(f"未找到从 {self.identifier} 到 {requirement.dst_drone} 的路由路径")
+                            # try:
+                            #     # 尝试使用compute_path方法
+                            #     packet.routing_path = self.routing_protocol.compute_path(
+                            #         packet.source_id,
+                            #         packet.dest_id,
+                            #         0  # 选项参数
+                            #     )
+                            # except AttributeError:
+                            #     # 如果路由协议没有compute_path方法，尝试使用dijkstra
+                            #     logging.warning(
+                            #         f"路由协议 {type(self.routing_protocol).__name__} 不支持compute_path方法，使用dijkstra")
+                            #     try:
+                            #         packet.routing_path = self.routing_protocol.dijkstra(
+                            #             self.routing_protocol.calculate_cost_matrix(),
+                            #             packet.source_id,
+                            #             packet.dest_id,
+                            #             0
+                            #         )
+                            #     except Exception as e:
+                            #         logging.error(f"计算路由路径失败: {str(e)}")
+                            #         packet.routing_path = []  # 设置为空路径
 
                             logging.info(
                                 f"Time {self.env.now}: Drone {self.identifier} routing path: {packet.routing_path}")
-                            if len(packet.routing_path) != 0:
-                                packet.routing_path.pop(0)
+                            # if len(packet.routing_path) != 0:
+                            #     packet.routing_path.pop(0)
                             logging.info(f"Time {self.env.now}: Drone {self.identifier} routing path: {packet.routing_path}")
                         if self.env.now < packet.creation_time + packet.deadline:  # this packet has not expired
                             if isinstance(packet, DataPacket):

@@ -10,7 +10,7 @@ from utils.util_function import euclidean_distance
 from phy.large_scale_fading import maximum_communication_range
 from routing.mp_olsr.olsr import Olsr
 from routing.mp_olsr.direct_olsr import DirectOlsr
-
+from simulator.improved_traffic_generator import TrafficRequirement
 # config logging
 logging.basicConfig(filename='running_log.log',
                     filemode='w',  # there are two modes: 'a' and 'w'
@@ -377,7 +377,9 @@ class MP_OLSR(DirectOlsr):
         enquire = False
         has_route = True
 
-        if isinstance(packet, DataPacket):
+        if isinstance(packet, DataPacket) or isinstance(packet, TrafficRequirement):
+            logging.info('UAV: %s (MP_OLSR) 为数据包(id: %s)选择下一跳',
+                         self.my_drone.identifier, packet.packet_id)
             dst_id = packet.dst_drone.identifier
 
             # 如果是目的地，就不需要路由
@@ -402,6 +404,7 @@ class MP_OLSR(DirectOlsr):
 
                 logging.info('UAV: %s (MP_OLSR) 使用全局邻居表为数据包(id: %s)选择下一跳: %s, 目的地: %s, 完整路径: %s',
                              self.my_drone.identifier, packet.packet_id, next_hop_id, dst_id, path)
+                packet.routing_path = path
 
             elif dst_id in self.routing_table:
                 # 回退到基本OLSR路由表

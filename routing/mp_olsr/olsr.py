@@ -7,7 +7,7 @@ from entities.packet import Packet, DataPacket
 from utils import config
 from utils.util_function import euclidean_distance
 from phy.large_scale_fading import maximum_communication_range
-
+from simulator.improved_traffic_generator import TrafficRequirement
 # config logging
 logging.basicConfig(filename='running_log.log',
                     filemode='w',  # there are two modes: 'a' and 'w'
@@ -318,7 +318,7 @@ class Olsr:
         enquire = False
         has_route = True
 
-        if isinstance(packet, DataPacket):
+        if isinstance(packet, DataPacket) or isinstance(packet, TrafficRequirement):
             dst_id = packet.dst_drone.identifier
 
             # 如果是目的地，就不需要路由

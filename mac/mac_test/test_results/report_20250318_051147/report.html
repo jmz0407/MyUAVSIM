@@ -1,0 +1,533 @@
+
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>MAC协议性能测试报告</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        margin: 0;
+                        padding: 20px;
+                        color: #333;
+                    }
+                    h1, h2, h3 {
+                        color: #2c3e50;
+                    }
+                    table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    }
+                    th, td {
+                        text-align: left;
+                        padding: 12px;
+                        border-bottom: 1px solid #ddd;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                    }
+                    tr:hover {
+                        background-color: #f5f5f5;
+                    }
+                    .chart-container {
+                        display: flex;
+                        flex-wrap: wrap;
+                        justify-content: space-around;
+                        margin: 20px 0;
+                    }
+                    .chart {
+                        margin: 10px;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    }
+                    .highlight {
+                        font-weight: bold;
+                        color: #1a73e8;
+                    }
+                    .summary-card {
+                        background-color: #f9f9f9;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-bottom: 20px;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    }
+                    .recommendation {
+                        background-color: #e8f5e9;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-top: 20px;
+                    }
+                    .traffic-section {
+                        margin-top: 30px;
+                        border-top: 1px solid #ddd;
+                        padding-top: 20px;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>MAC协议性能测试报告</h1>
+                <p>生成时间: 2025-03-18 05:22:05</p>
+
+                <div class="summary-card">
+                    <h2>测试概览</h2>
+                    <p>本报告比较了以下MAC协议在无人机网络中的性能表现：</p>
+                    <ul>
+                        <li>BasicSTDMA</li><li>DQN-STDMA</li><li>PPO-STDMA</li><li>TraTDMA</li>
+                    </ul>
+                    <p>测试条件：</p>
+                    <ul>
+                        <li>无人机数量: 10</li>
+                        <li>业务模式: BURST, CBR, PERIODIC, POISSON, VBR</li>
+                        <li>仿真时间: 5 秒</li>
+                    </ul>
+                </div>
+
+                <h2>性能结果摘要</h2>
+            
+                <table>
+                    <tr>
+                        <th>协议</th>
+                        <th>平均端到端延迟 (ms)</th>
+                        <th>平均数据包投递率 (%)</th>
+                        <th>平均吞吐量 (kbps)</th>
+                        <th>平均MAC延迟 (ms)</th>
+                        <th>平均能量消耗 (J)</th>
+                        <th>平均碰撞次数</th>
+                    </tr>
+            
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>15.69</td>
+                        <td>100.00</td>
+                        <td>2650.07</td>
+                        <td>0.68</td>
+                        <td>9424.27</td>
+                        <td>0</td>
+                    </tr>
+                
+                    <tr>
+                        <td>DQN-STDMA</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5593.68</td>
+                        <td>0.38</td>
+                        <td>9424.26</td>
+                        <td>0</td>
+                    </tr>
+                
+                    <tr>
+                        <td>PPO-STDMA</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8113.47</td>
+                        <td>0.26</td>
+                        <td>9424.26</td>
+                        <td>0</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>16.97</td>
+                        <td>100.00</td>
+                        <td>1746.36</td>
+                        <td>0.99</td>
+                        <td>9424.26</td>
+                        <td>0</td>
+                    </tr>
+                </table>
+                <h2>性能对比图表</h2>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>端到端延迟对比</h3>
+                        <img src="e2e_delay_vs_drones.png" alt="端到端延迟对比" width="400">
+                    </div>
+                    <div class="chart">
+                        <h3>数据包投递率对比</h3>
+                        <img src="pdr_vs_drones.png" alt="数据包投递率对比" width="400">
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>吞吐量对比</h3>
+                        <img src="throughput_vs_drones.png" alt="吞吐量对比" width="400">
+                    </div>
+                    <div class="chart">
+                        <h3>MAC层延迟对比</h3>
+                        <img src="mac_delay_vs_drones.png" alt="MAC层延迟对比" width="400">
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>能量消耗对比</h3>
+                        <img src="energy_vs_drones.png" alt="能量消耗对比" width="400">
+                    </div>
+                    <div class="chart">
+                        <h3>碰撞次数对比</h3>
+                        <img src="collisions_vs_drones.png" alt="碰撞次数对比" width="400">
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart">
+                        <h3>协议综合性能雷达图</h3>
+                        <img src="protocol_radar_comparison.png" alt="协议综合性能雷达图" width="600">
+                    </div>
+                </div>
+            
+                    <div class="traffic-section">
+                        <h2>不同业务模式下的性能比较</h2>
+
+                        <div class="chart-container">
+                            <div class="chart">
+                                <h3>不同业务流下的端到端延迟</h3>
+                                <img src="e2e_delay_ms_vs_traffic.png" alt="不同业务流下的端到端延迟" width="500">
+                            </div>
+                            <div class="chart">
+                                <h3>不同业务流下的数据包投递率</h3>
+                                <img src="pdr_percent_vs_traffic.png" alt="不同业务流下的数据包投递率" width="500">
+                            </div>
+                        </div>
+
+                        <div class="chart-container">
+                            <div class="chart">
+                                <h3>不同业务流下的吞吐量</h3>
+                                <img src="throughput_kbps_vs_traffic.png" alt="不同业务流下的吞吐量" width="500">
+                            </div>
+                        </div>
+                    </div>
+                
+                <h2>分析与结论</h2>
+
+                <div class="summary-card">
+                    <h3>综合表现评估</h3>
+                    <p>经过综合评分，<span class="highlight">PPO-STDMA</span> 协议在测试场景中整体表现最佳。</p>
+
+                    <h3>各指标最佳表现</h3>
+                    <ul>
+                        <li>最高数据包投递率: <span class="highlight">BasicSTDMA</span></li>
+                        <li>最高吞吐量: <span class="highlight">PPO-STDMA</span></li>
+                        <li>最低端到端延迟: <span class="highlight">PPO-STDMA</span></li>
+                        <li>最低MAC层延迟: <span class="highlight">PPO-STDMA</span></li>
+                        <li>最低能量消耗: <span class="highlight">TraTDMA</span></li>
+                        <li>最少碰撞次数: <span class="highlight">BasicSTDMA</span></li>
+                    </ul>
+                </div>
+
+                <div class="recommendation">
+                    <h3>协议选择建议</h3>
+                    <p>基于测试结果，我们建议:</p>
+                    <ul>
+            <li>对于小规模网络 (10架无人机): 建议使用 <span class="highlight">PPO-STDMA</span></li><li>不同业务模式建议:</li><ul><li>对于BURST业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于CBR业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于PERIODIC业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于POISSON业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li><li>对于VBR业务模式: 建议使用 <span class="highlight">BasicSTDMA</span></li></ul>
+                    </ul>
+                </div>
+
+                <h2>详细测试数据</h2>
+            
+                <table>
+                    <tr>
+                        <th>协议</th>
+                        <th>无人机数量</th>
+                        <th>业务模式</th>
+                        <th>业务流数量</th>
+                        <th>端到端延迟 (ms)</th>
+                        <th>数据包投递率 (%)</th>
+                        <th>吞吐量 (kbps)</th>
+                        <th>跳数</th>
+                        <th>MAC延迟 (ms)</th>
+                        <th>碰撞次数</th>
+                        <th>平均能耗 (J)</th>
+                    </tr>
+            
+                    <tr>
+                        <td>PPO-STDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8126.40</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>PPO-STDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8126.40</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>PPO-STDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8121.93</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>PPO-STDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8106.11</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>PPO-STDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>1.07</td>
+                        <td>100.00</td>
+                        <td>8086.48</td>
+                        <td>4.00</td>
+                        <td>0.26</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>DQN-STDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5600.38</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>DQN-STDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5600.38</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>DQN-STDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5596.29</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>DQN-STDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5590.21</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>DQN-STDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>1.55</td>
+                        <td>100.00</td>
+                        <td>5581.12</td>
+                        <td>4.00</td>
+                        <td>0.38</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>3.74</td>
+                        <td>100.00</td>
+                        <td>2353.00</td>
+                        <td>4.00</td>
+                        <td>0.93</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>3.74</td>
+                        <td>100.00</td>
+                        <td>2353.00</td>
+                        <td>4.00</td>
+                        <td>0.93</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>6.59</td>
+                        <td>100.00</td>
+                        <td>1434.89</td>
+                        <td>4.00</td>
+                        <td>1.07</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>3.75</td>
+                        <td>100.00</td>
+                        <td>2352.32</td>
+                        <td>4.00</td>
+                        <td>0.93</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>TraTDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>67.02</td>
+                        <td>100.00</td>
+                        <td>238.62</td>
+                        <td>4.00</td>
+                        <td>1.09</td>
+                        <td>0</td>
+                        <td>9424.26</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>CBR</td>
+                        <td>1</td>
+                        <td>2.44</td>
+                        <td>100.00</td>
+                        <td>3686.01</td>
+                        <td>4.00</td>
+                        <td>0.60</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>POISSON</td>
+                        <td>1</td>
+                        <td>2.44</td>
+                        <td>100.00</td>
+                        <td>3686.01</td>
+                        <td>4.00</td>
+                        <td>0.60</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>BURST</td>
+                        <td>1</td>
+                        <td>5.22</td>
+                        <td>100.00</td>
+                        <td>1938.38</td>
+                        <td>4.00</td>
+                        <td>0.78</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>VBR</td>
+                        <td>1</td>
+                        <td>2.46</td>
+                        <td>100.00</td>
+                        <td>3679.22</td>
+                        <td>4.00</td>
+                        <td>0.61</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                    <tr>
+                        <td>BasicSTDMA</td>
+                        <td>10</td>
+                        <td>PERIODIC</td>
+                        <td>1</td>
+                        <td>65.89</td>
+                        <td>100.00</td>
+                        <td>260.74</td>
+                        <td>4.00</td>
+                        <td>0.80</td>
+                        <td>0</td>
+                        <td>9424.27</td>
+                    </tr>
+                
+                </table>
+
+                <footer>
+                    <p>注: 本报告通过自动化测试生成，实际部署时应考虑具体应用场景进行最终决策。</p>
+                </footer>
+            </body>
+            </html>
+            

@@ -623,7 +623,7 @@ def visualize_gat_features(model, env):
 
         # 添加节点编号标签
         for i in range(len(node_features_2d)):
-            plt.annotate(str(i), (node_features_2d[i, 0], node_features_2d[i, 1]), fontsize=12)
+            plt.annotate(str(i), (node_features_2d[i, 0], node_features_2d[i, 1]), fontsize=18)
 
         plt.title('GAT节点特征PCA可视化')
         plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.2%})')
@@ -644,7 +644,7 @@ def visualize_gat_features(model, env):
                 plt.scatter(tsne_features[:, 0], tsne_features[:, 1], s=100)
 
                 for i in range(len(tsne_features)):
-                    plt.annotate(str(i), (tsne_features[i, 0], tsne_features[i, 1]), fontsize=12)
+                    plt.annotate(str(i), (tsne_features[i, 0], tsne_features[i, 1]), fontsize=18)
 
                 plt.title(f'GAT节点特征t-SNE可视化 (perplexity={perplexity})')
                 plt.grid(True)
@@ -1631,7 +1631,7 @@ if __name__ == "__main__":
 
         print("开始STDMA PPO训练...")
         model, log_dir = train_stdma_agent(
-            total_timesteps=200000,
+            total_timesteps=100000,
             num_envs=1
         )
         # model_path = './logs/STDMA_PPO_20250225_050845/best_model/best_model.zip'

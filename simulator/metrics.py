@@ -5,6 +5,9 @@ from utils import config
 import matplotlib.pyplot as plt
 import numpy as np
 from simulator.TemporalMetrics import TemporalMetrics
+import matplotlib
+import logging
+matplotlib.font_manager._log.setLevel(logging.WARNING)
 plt.rcParams['font.sans-serif']=['STFangsong'] #用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False #用来正常显示负号
 class Metrics:
