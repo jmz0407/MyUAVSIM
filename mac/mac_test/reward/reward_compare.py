@@ -77,16 +77,17 @@ ax1.plot(dqn_data['Step'], smooth_curve(dqn_data['Value'].values),
 
 # 添加网格
 ax1.grid(True, linestyle='--', alpha=0.7)
-
+# 修改横纵坐标的大小
+ax1.tick_params(axis='both', which='major', labelsize=16)  # 增加刻度标签大小
 # 设置x轴和y轴标签
-ax1.set_xlabel('训练步数 (Steps)', fontsize=14)
-ax1.set_ylabel('奖励值 (Reward)', fontsize=14)
+ax1.set_xlabel('训练步数 (Steps)', fontsize=16,)
+ax1.set_ylabel('奖励值 (Reward)', fontsize=16)
 
 # 设置标题
-ax1.set_title('不同强化学习算法的奖励曲线对比', fontsize=16, pad=20)
+ax1.set_title('不同强化学习算法的奖励曲线对比', fontsize=20, pad=20)
 
 # 添加图例
-ax1.legend(loc='upper left', fontsize=12)
+ax1.legend(loc='upper left', fontsize=16)
 
 # 添加空白行分隔主图和子图
 # gs[3, :] 是一个空行
@@ -99,12 +100,12 @@ colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
 ax2 = plt.subplot(gs[4, 0])
 avg_rewards = [ppo_stats["平均值"], gat_dqn_stats["平均值"], dqn_stats["平均值"]]
 ax2.bar(algorithms, avg_rewards, color=colors, alpha=0.7, width=0.6)
-ax2.set_title('平均奖励值对比', fontsize=14)
-ax2.set_ylabel('奖励值', fontsize=13)
-ax2.tick_params(axis='x', rotation=45, labelsize=12)
+ax2.set_title('平均奖励值对比', fontsize=16)
+ax2.set_ylabel('奖励值', fontsize=15)
+ax2.tick_params(axis='x', rotation=45, labelsize=14)
 # 设置y轴限制
 ax2.set_ylim(0, 75)  # 根据数据范围调整
-ax2.tick_params(axis='y', labelsize=12)
+ax2.tick_params(axis='y', labelsize=14)
 for i, v in enumerate(avg_rewards):
     ax2.text(i, v + 4, f"{v:.2f}", ha='center', fontsize=12, fontweight='bold')
 
@@ -112,13 +113,13 @@ for i, v in enumerate(avg_rewards):
 ax3 = plt.subplot(gs[4, 1])
 stability = [ppo_stability, gat_dqn_stability, dqn_stability]
 ax3.bar(algorithms, stability, color=colors, alpha=0.7, width=0.6)
-ax3.set_title('训练稳定性对比 (标准差/平均值)', fontsize=14)
-ax3.set_ylabel('比率', fontsize=13)
-ax3.tick_params(axis='x', rotation=45, labelsize=12)
+ax3.set_title('训练稳定性对比 (标准差/平均值)', fontsize=16)
+ax3.set_ylabel('比率', fontsize=15)
+ax3.tick_params(axis='x', rotation=45, labelsize=14)
 
 # 设置y轴限制，给予稳定性图表更合适的高度
-ax3.set_ylim(0, 0.6)  # 调整这个值来改变图表高度
-ax3.tick_params(axis='y', labelsize=12)
+ax3.set_ylim(0, 0.7)  # 调整这个值来改变图表高度
+ax3.tick_params(axis='y', labelsize=14)
 
 # 调整文本标签位置
 for i, v in enumerate(stability):
@@ -130,18 +131,18 @@ for i, v in enumerate(stability):
 ax4 = plt.subplot(gs[4, 2])
 convergence = [ppo_stats["收敛平均值"], gat_dqn_stats["收敛平均值"], dqn_stats["收敛平均值"]]
 ax4.bar(algorithms, convergence, color=colors, alpha=0.7, width=0.6)
-ax4.set_title('收敛奖励值对比', fontsize=14)
-ax4.set_ylabel('奖励值', fontsize=13)
-ax4.tick_params(axis='x', rotation=45, labelsize=12)
+ax4.set_title('收敛奖励值对比', fontsize=16)
+ax4.set_ylabel('奖励值', fontsize=15)
+ax4.tick_params(axis='x', rotation=45, labelsize=14)
 # 设置y轴限制
 ax4.set_ylim(0, 75)  # 使用与平均奖励图相同的范围以便于比较
-ax4.tick_params(axis='y', labelsize=12)
+ax4.tick_params(axis='y', labelsize=14)
 for i, v in enumerate(convergence):
-    ax4.text(i, v + 4, f"{v:.2f}", ha='center', fontsize=12, fontweight='bold')
+    ax4.text(i, v + 4, f"{v:.2f}", ha='center', fontsize=14, fontweight='bold')
 
 # 调整布局
 plt.tight_layout()
-plt.subplots_adjust(hspace=0.6, wspace=0.3)
+plt.subplots_adjust(hspace=0.4, wspace=0.2)
 
 # 保存高分辨率图像
 plt.savefig('rl_algorithms_comparison.png', dpi=300, bbox_inches='tight')

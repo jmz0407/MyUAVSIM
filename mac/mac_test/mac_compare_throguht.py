@@ -88,9 +88,9 @@ for i, (protocol, label) in enumerate(zip(protocols, labels)):
         ax.plot(drones, protocol[traffic], marker='o', linewidth=2,
                 label=traffic)
 
-    ax.set_title(f'{label}协议在不同业务流下的吞吐量', fontsize=14)
-    ax.set_xlabel('无人机数量', fontsize=12)
-    ax.set_ylabel('吞吐量 (kbps)', fontsize=12)
+    ax.set_title(f'{label}协议在不同业务流下的吞吐量', fontsize=20)
+    ax.set_xlabel('无人机数量', fontsize=17)
+    ax.set_ylabel('吞吐量 (kbps)', fontsize=17)
     ax.grid(True, linestyle='--', alpha=0.7)
     ax.legend(loc='best')
     ax.set_xticks(drones)
@@ -123,12 +123,12 @@ for i, (avg, label) in enumerate(zip(average_throughput, labels)):
              linewidth=3, markersize=10, label=label)
 
 plt.title('各协议在不同无人机数量下的平均吞吐量', fontsize=18)
-plt.xlabel('无人机数量', fontsize=16)
-plt.ylabel('平均吞吐量 (kbps)', fontsize=16)
+plt.xlabel('无人机数量', fontsize=17)
+plt.ylabel('平均吞吐量 (kbps)', fontsize=17)
 plt.grid(True, linestyle='--', alpha=0.7)
-plt.legend(loc='best', fontsize=14)
-plt.xticks(drones, fontsize=14)
-plt.yticks(fontsize=14)
+plt.legend(loc='best', fontsize=16)
+plt.xticks(drones, fontsize=16)
+plt.yticks(fontsize=16)
 
 plt.tight_layout()
 plt.savefig('average_throughput1.png', dpi=300)

@@ -26,15 +26,15 @@ markers = ['o', 's', '^', 'd', 'v']
 for i, method in enumerate(methods):
     plt.plot(traffic_types, delay_data[method], marker=markers[i], linewidth=2, markersize=8, label=method)
 
-plt.xlabel('业务类型', fontsize=14)
-plt.ylabel('端到端延迟 (ms)', fontsize=14)
-plt.title('不同业务类型的端到端延迟对比', fontsize=16)
+plt.xlabel('业务类型', fontsize=16)
+plt.ylabel('端到端延迟 (ms)', fontsize=16)
+plt.title('不同业务类型的端到端延迟对比', fontsize=18)
 plt.grid(True, linestyle='--', alpha=0.7)
-plt.legend(fontsize=12)
+plt.legend(fontsize=14)
 
 # 为RL-STDMA的每个点添加数值标签（为避免拥挤，只标注最优方法）
 for i, value in enumerate(delay_data['PPO-STDMA']):
-    plt.text(i, value-3, f"{value}", ha='center', fontsize=10)
+    plt.text(i, value-3, f"{value}", ha='center', fontsize=12)
 
 plt.tight_layout()
 plt.savefig('delay_comparison_line.png', dpi=300, bbox_inches='tight')

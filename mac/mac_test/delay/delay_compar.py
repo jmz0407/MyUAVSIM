@@ -96,8 +96,8 @@ for traffic in traffic_types:
             plt.ylim(0, 25)  # 让小延迟值更容易区分
 
     plt.title(traffic_titles[traffic], fontsize=16)
-    plt.xlabel('无人机数量', fontsize=14)
-    plt.ylabel('端到端延迟 (ms)', fontsize=14)
+    plt.xlabel('无人机数量', fontsize=16)
+    plt.ylabel('端到端延迟 (ms)', fontsize=16)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend(loc='best', fontsize=12)
     plt.xticks(drones)
@@ -121,9 +121,9 @@ for i, (protocol, label) in enumerate(zip(protocols, labels)):
         if traffic != 'PERIODIC':  # 排除PERIODIC以便更好地观察其他业务流
             ax.plot(drones, protocol[traffic], marker='o', linewidth=2, label=traffic)
 
-    ax.set_title(f'{label}协议在不同业务流下的端到端延迟', fontsize=14)
-    ax.set_xlabel('无人机数量', fontsize=12)
-    ax.set_ylabel('端到端延迟 (ms)', fontsize=12)
+    ax.set_title(f'{label}协议在不同业务流下的端到端延迟', fontsize=18)
+    ax.set_xlabel('无人机数量', fontsize=16)
+    ax.set_ylabel('端到端延迟 (ms)', fontsize=16)
     ax.grid(True, linestyle='--', alpha=0.7)
     ax.legend(loc='best')
     ax.set_xticks(drones)
@@ -185,9 +185,9 @@ for i, protocol in enumerate(protocols):
     plt.plot(drones, protocol['PERIODIC'], marker=markers[i], color=colors[i],
              linewidth=2, markersize=8, label=labels[i])
 
-plt.title('PERIODIC业务流下各协议的端到端延迟对比', fontsize=16)
-plt.xlabel('无人机数量', fontsize=14)
-plt.ylabel('端到端延迟 (ms)', fontsize=14)
+plt.title('PERIODIC业务流下各协议的端到端延迟对比', fontsize=18)
+plt.xlabel('无人机数量', fontsize=16)
+plt.ylabel('端到端延迟 (ms)', fontsize=16)
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.legend(loc='upper left', fontsize=12)
 plt.xticks(drones)
@@ -219,11 +219,11 @@ for i, (protocol, label) in enumerate(zip(protocols, labels)):
     width = 0.2  # 柱宽
     plt.bar(x + i * width, growth_rates, width, color=colors[i], label=label)
 
-plt.title('各协议在10-30架无人机场景下的延迟增长倍数', fontsize=16)
-plt.xlabel('业务类型', fontsize=14)
-plt.ylabel('延迟增长倍数', fontsize=14)
+plt.title('各协议在10-30架无人机场景下的延迟增长倍数', fontsize=18)
+plt.xlabel('业务类型', fontsize=16)
+plt.ylabel('延迟增长倍数', fontsize=16)
 plt.xticks(x + width * 1.5, regular_traffic)
-plt.legend(loc='best', fontsize=12)
+plt.legend(loc='best', fontsize=14)
 plt.grid(True, linestyle='--', alpha=0.3, axis='y')
 
 plt.tight_layout()

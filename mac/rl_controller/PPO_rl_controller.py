@@ -1443,9 +1443,9 @@ def compare_learning_curves(env_factory, total_timesteps=200000):
                             linewidth=2
                         )
 
-        ax.set_title('GAT vs MLP Learning Curves (Evaluated every 1000 steps)', fontsize=14, pad=12)
-        ax.set_xlabel('Training Steps', fontsize=12)
-        ax.set_ylabel('Average Reward', fontsize=12)
+        ax.set_title('GAT vs MLP Learning Curves', fontsize=16, pad=12)
+        ax.set_xlabel('训练步长', fontsize=14)
+        ax.set_ylabel('平均奖励', fontsize=14)
         ax.legend(frameon=True, facecolor='white')
         ax.grid(True, linestyle='--', alpha=0.6)
 
